@@ -69,7 +69,6 @@ class Experiment:
 
         self.data_dir = os.path.join(self.name, 'data')
         self.summary = Config(os.path.join(self.name, 'summary.txt'))
-        print self.summary.getint('overall', 'trial_count')
 
         self.encodings = {
             'raw': self.encode_raw,
@@ -139,12 +138,15 @@ class Experiment:
     def print_summary(self):
         print 'Summary of', self.name
         data = []
+        base_line = self.summary.getint('raw', 'size_mean')
         for name in self.encodings:
             mean = self.summary.get(name, 'size_mean')
             variance = self.summary.get(name, 'size_variance')
             data.append([name, mean, variance])
         data = sorted(data, key=itemgetter(1))
-        headers = ['encoding', 'mean size', 'size variance']
+        for row in data:
+            row[1] = '%s (%d%%)' % (row[1], 100 * int(row[1]) / base_line)
+        headers = ['encoding', 'mean size (%)', 'size variance']
         print tabulate(data, headers)
 
     def encode_raw(self):
