@@ -37,4 +37,6 @@ nosetests.xml
 venv
 .idea
 
-lorem/archive
+identity/
+one_char_delete/
+ten_char_delete/
