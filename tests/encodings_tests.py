@@ -1,5 +1,9 @@
 from nose.tools import assert_equal
-from warcompress.experiments.encodings import __build_tree, __calculate_entropy, __random_generate
+from warcompress.experiments.encodings import (
+    __build_tree,
+    __calculate_entropy,
+    __random_text
+)
 
 
 def setup():
@@ -102,11 +106,5 @@ def test_random_generate():
     text = 'abcdd'
     for i in xrange(1, 3):
         tree = __build_tree(text, i)
-        random_text = ''
-        for _ in xrange(10):
-            if i == 1:
-                seed_text = ''
-            else:
-                seed_text = text[-(i-1):]
-            random_text += __random_generate(seed_text, tree)
+        random_text = __random_text(tree, i, 10)
         print random_text

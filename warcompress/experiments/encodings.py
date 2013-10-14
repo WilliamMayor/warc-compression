@@ -101,6 +101,7 @@ def __random_text(tree, tree_depth, length):
 
 
 def n_order_optimal(data_path, n):
+    path = os.path.splitext(data_path)[0] + '.%do' % n
     with open(data_path, 'r') as fd:
         text = fd.read()
         size = len(text)
@@ -110,7 +111,6 @@ def n_order_optimal(data_path, n):
     tree = __build_tree(text, n)
     entropy = __calculate_entropy(tree, len(text))
     optimal = int(entropy * size / 8)
-    path = os.path.splitext(data_path)[0] + '.%do' % n
     with open(path, 'w') as fd:
         text = None
         while text is None:

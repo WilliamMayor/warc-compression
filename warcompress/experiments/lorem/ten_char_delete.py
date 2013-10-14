@@ -36,4 +36,4 @@ if __name__ == '__main__':
         'ten_char_delete',
         factory_factory(base_path, data_path)
     )
-    e.run(100)
+    e.run(1)
