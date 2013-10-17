@@ -52,15 +52,13 @@ class Experiment:
             compressed_data_path = encodings.n_order_optimal(self.data_path, n)
             self.update_averages(name, compressed_data_path)
         names = encodings.diff.keys()
-        iframes_every = [0, 2, 5, 10]
-        is_waterfall = [True, False]
-        for (n, d, w) in itertools.product(names, iframes_every, is_waterfall):
-            name = ' '.join(['          ',
-                             '%s,' % n,
-                             'iframe every %d,' % d,
-                             'waterfall' if w else 'from iframe'])
+        iframes_every = [0, 1, 2, 5, 10]
+        for (n, d) in itertools.product(names, iframes_every):
+            name = ''.join(['            ',
+                            '%s, ' % n,
+                            'iframe every %d' % d])
             print name
-            diff_data_path = encodings.diff[n](self.data_path, d, w)
+            diff_data_path = encodings.diff[n](self.data_path, d)
             self.update_averages(name, diff_data_path)
         self.summary.save()
 

@@ -5,6 +5,7 @@ import bz2
 import math
 import random
 import subprocess
+import tempfile
 
 from itertools import tee, izip
 
@@ -42,48 +43,98 @@ def _bz2(data_path):
     return path
 
 
-def diffe(data_path, iframe_every, waterfall):
-    diffe_path = os.path.join(
-        os.path.dirname(os.path.realpath(__file__)),
-        'diff.sh'
-    )
+def __diffe(source, target):
+    with open(os.devnull, 'wb') as devnull:
+        return subprocess.Popen(
+            ['diff', '--ed', source, target],
+            stdout=subprocess.PIPE,
+            stderr=devnull
+        ).communicate()[0]
+
+
+def __vcdiff(source, target):
+    with open(os.devnull, 'wb') as devnull:
+        return subprocess.Popen(
+            ['vcdiff', 'delta', '-dictionary', source, '-target', target],
+            stdout=subprocess.PIPE,
+            stderr=devnull
+        ).communicate()[0]
+
+
+def __bsdiff(source, target):
+    patch = tempfile.NamedTemporaryFile()
+    with open(os.devnull, 'wb') as devnull:
+        subprocess.call(
+            ['bsdiff', source, target, patch.name],
+            stdout=devnull,
+            stderr=devnull
+        )
+    text = patch.read()
+    patch.close()
+    return text
+
+
+def __pair(files, iframe_every):
+    if iframe_every == 0 or iframe_every >= len(files):
+        return [(files[0], files[1:])]
+    pairs = []
+    j = max(iframe_every, 2)
+    for i in xrange(0, len(files), iframe_every):
+        pairs.append((files[i], files[i+1:i+j]))
+    return pairs
+
+
+def __deltas(algorithm, pairs):
+    for (base_text, steps) in pairs:
+        base_temp = tempfile.NamedTemporaryFile()
+        base_temp.write(base_text)
+        base_temp.flush()
+        for step_text in steps:
+            step_temp = tempfile.NamedTemporaryFile()
+            step_temp.write(step_text)
+            step_temp.flush()
+            yield algorithm(base_temp.name, step_temp.name)
+            step_temp.close()
+        base_temp.close()
+
+
+def __diff(ext, algorithm, data_path, iframe_every):
     path = '.'.join([
         os.path.splitext(data_path)[0],
-        'w' if waterfall else 'i',
-        '%d' % iframe_every,
-        'diff'
+        'i%d' % iframe_every,
+        ext
     ])
     with open(data_path, 'r') as fd:
         raw_text = fd.read()
     files = raw_text.split(RECORD_SEPARATOR)
     with open(path, 'w') as fd:
+        pairs = __pair(files, iframe_every)
         fd.write(files[0])
-        iframe_at = 0
-        steps = 1
-        for i in xrange(1, len(files)):
+        i = 1
+        for delta in __deltas(algorithm, pairs):
             fd.write(RECORD_SEPARATOR)
-            if steps == iframe_every:
+            if iframe_every not in [0, 1] and i % iframe_every == 0:
                 fd.write(files[i])
-                steps = 1
-                iframe_at = i
             else:
-                if waterfall:
-                    base = files[i-1]
-                else:
-                    base = files[iframe_at]
-                p = subprocess.Popen(
-                    '%s "%s" "%s"' % (diffe_path, base, files[i]),
-                    stdout=subprocess.PIPE,
-                    shell=True
-                )
-                (out, err) = p.communicate()
-                fd.write(out)
-                steps += 1
+                fd.write(delta)
+            i += 1
     return path
 
 
-def diffe_gzip(data_path, iframe_every, waterfall):
-    diffed = diffe(data_path, iframe_every, waterfall)
+def diffe(data_path, iframe_every):
+    return __diff('diffe', __diffe, data_path, iframe_every)
+
+
+def vcdiff(data_path, iframe_every):
+    return __diff('vcdiff', __vcdiff, data_path, iframe_every)
+
+
+def bsdiff(data_path, iframe_every):
+    return __diff('bsdiff', __bsdiff, data_path, iframe_every)
+
+
+def diffe_gzip(data_path, iframe_every):
+    diffed = diffe(data_path, iframe_every)
     ext = os.path.splitext(diffed)[1]
     bad_path = _gzip(diffed)
     parts = os.path.splitext(bad_path)
@@ -186,7 +237,9 @@ compression = {
 }
 diff = {
     'diffe': diffe,
-    'diffe_gzip': diffe_gzip
+    'diffe_gzip': diffe_gzip,
+    'vcdiff': vcdiff,
+    'bsdiff': bsdiff
     # use diff algorithms (diff, diffe, vcdiff, etc.)
     #   diff from previous file
     #   diff from first files
