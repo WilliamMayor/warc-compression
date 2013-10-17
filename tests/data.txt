@@ -1,0 +1,53 @@
+one
+two. 2
+3
+5ive
+---warcompress test---
+1. one
+two. 2
+3
+5ive
+---warcompress test---
+1. one
+two. 2
+3.
+5ive
+---warcompress test---
+one
+two. 2
+3. three
+5ive
+---warcompress test---
+1. one
+two. 2
+3. three
+5ive
+---warcompress test---
+1. one
+2. two
+3. three
+5ive
+---warcompress test---
+1. one
+2. two
+3. three
+4. fou
+5ive
+---warcompress test---
+1. one
+2. two
+3. three
+4. four
+5ive
+---warcompress test---
+1. one
+2. two
+3. three
+4. four
+5. ive
+---warcompress test---
+1. one
+2. two
+3. three
+4. four
+5. five

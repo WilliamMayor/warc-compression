@@ -1,9 +1,11 @@
 """
-Removes a single character from the file at a time until the file is empty
+Removes a single character at random from the file 100 times
 """
 import os
+import sys
 from warcompress.experiments.Experiment import Experiment
 from warcompress.experiments import modifiers
+import warcompress.experiments.encodings as encodings
 
 
 def factory_factory(base_path, data_path):
@@ -12,9 +14,9 @@ def factory_factory(base_path, data_path):
             base_text = fd.read()
         text = base_text
         previous = base_text
-        while len(previous) > 0:
+        for i in xrange(0, 20):
             previous = modifiers.delete(previous, 1)
-            text += Experiment.RECORD_SEPARATOR + previous
+            text += encodings.RECORD_SEPARATOR + previous
         with open(data_path, 'w') as fd:
             fd.write(text)
         return data_path
@@ -22,18 +24,20 @@ def factory_factory(base_path, data_path):
     return g
 
 if __name__ == '__main__':
-    script_path = os.path.realpath(__file__)
-    script_dir = os.path.dirname(script_path)
-    data_dir = os.path.join(script_dir, 'one_char_delete')
+    if len(sys.argv) != 2:
+        print 'Must provide base data to work from'
+        exit(1)
+    base_text_path = sys.argv[1]
+    base_text_dir = os.path.dirname(base_text_path)
+    data_dir = os.path.join(base_text_dir, 'one_char_delete')
     try:
         os.mkdir(data_dir)
     except OSError:
         # Directory already exists
         pass
     data_path = os.path.join(data_dir, 'data.txt')
-    base_path = os.path.join(script_dir, 'base.txt')
     e = Experiment(
         'one_char_delete',
-        factory_factory(base_path, data_path)
+        factory_factory(base_text_path, data_path)
     )
     e.run(1)

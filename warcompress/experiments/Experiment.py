@@ -4,16 +4,15 @@ Generate experimental data using the base.txt as a starting point
 Creates directories of files that represent changes over time of the base file
 """
 import os
+import itertools
 from operator import itemgetter
 from tabulate import tabulate
 
 from Config import Config
-import encodings
+from warcompress.experiments import encodings
 
 
 class Experiment:
-
-    RECORD_SEPARATOR = '\n---warcompress test---\n'
 
     def __init__(self, name, factory):
         self.name = name
@@ -43,7 +42,7 @@ class Experiment:
 
     def test(self):
         print '        running compression tests'
-        for name, encode in encodings.all.iteritems():
+        for name, encode in encodings.compression.iteritems():
             print '           ', name
             compressed_data_path = encode(self.data_path)
             self.update_averages(name, compressed_data_path)
@@ -52,6 +51,17 @@ class Experiment:
             print '           ', name
             compressed_data_path = encodings.n_order_optimal(self.data_path, n)
             self.update_averages(name, compressed_data_path)
+        names = encodings.diff.keys()
+        iframes_every = [0, 2, 5, 10]
+        is_waterfall = [True, False]
+        for (n, d, w) in itertools.product(names, iframes_every, is_waterfall):
+            name = ' '.join(['          ',
+                             '%s,' % n,
+                             'iframe every %d,' % d,
+                             'waterfall' if w else 'from iframe'])
+            print name
+            diff_data_path = encodings.diff[n](self.data_path, d, w)
+            self.update_averages(name, diff_data_path)
         self.summary.save()
 
     def update_averages(self, name, data_path):

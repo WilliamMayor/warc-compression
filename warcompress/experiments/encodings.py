@@ -4,7 +4,11 @@ import gzip
 import bz2
 import math
 import random
+import subprocess
+
 from itertools import tee, izip
+
+RECORD_SEPARATOR = '\n---warcompress test---\n'
 
 
 def raw(data_path):
@@ -35,6 +39,56 @@ def _bz2(data_path):
     f_out.writelines(f_in)
     f_out.close()
     f_in.close()
+    return path
+
+
+def diffe(data_path, iframe_every, waterfall):
+    diffe_path = os.path.join(
+        os.path.dirname(os.path.realpath(__file__)),
+        'diff.sh'
+    )
+    path = '.'.join([
+        os.path.splitext(data_path)[0],
+        'w' if waterfall else 'i',
+        '%d' % iframe_every,
+        'diff'
+    ])
+    with open(data_path, 'r') as fd:
+        raw_text = fd.read()
+    files = raw_text.split(RECORD_SEPARATOR)
+    with open(path, 'w') as fd:
+        fd.write(files[0])
+        iframe_at = 0
+        steps = 1
+        for i in xrange(1, len(files)):
+            fd.write(RECORD_SEPARATOR)
+            if steps == iframe_every:
+                fd.write(files[i])
+                steps = 1
+                iframe_at = i
+            else:
+                if waterfall:
+                    base = files[i-1]
+                else:
+                    base = files[iframe_at]
+                p = subprocess.Popen(
+                    '%s "%s" "%s"' % (diffe_path, base, files[i]),
+                    stdout=subprocess.PIPE,
+                    shell=True
+                )
+                (out, err) = p.communicate()
+                fd.write(out)
+                steps += 1
+    return path
+
+
+def diffe_gzip(data_path, iframe_every, waterfall):
+    diffed = diffe(data_path, iframe_every, waterfall)
+    ext = os.path.splitext(diffed)[1]
+    bad_path = _gzip(diffed)
+    parts = os.path.splitext(bad_path)
+    path = parts[0] + ext + parts[1]
+    os.rename(bad_path, path)
     return path
 
 
@@ -123,11 +177,16 @@ def n_order_optimal(data_path, n):
                 pass
         fd.write(text)
     return path
-all = {
+
+compression = {
     'raw': raw,
     'zip': _zip,
     'gzip': _gzip,
     'bzip2': _bz2
+}
+diff = {
+    'diffe': diffe,
+    'diffe_gzip': diffe_gzip
     # use diff algorithms (diff, diffe, vcdiff, etc.)
     #   diff from previous file
     #   diff from first files
