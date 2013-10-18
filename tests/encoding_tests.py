@@ -5,7 +5,18 @@ import bz2
 import subprocess
 
 from nose.tools import assert_equal, assert_true
-import warcompress.experiments.encodings as encodings
+from warcompress.encodings import utilities
+from warcompress.encodings.compression import (
+    _zip,
+    gz,
+    bzip2
+)
+from warcompress.encodings.delta import (
+    bsdiff,
+    diffe,
+    diffe_gz,
+    vcdiff
+)
 
 MODULE_PATH = os.path.realpath(__file__)
 MODULE_DIR = os.path.dirname(MODULE_PATH)
@@ -31,7 +42,7 @@ def teardown():
 
 
 def test_zip():
-    zipped_path = encodings._zip(DATA_PATH)
+    zipped_path = _zip.encode(DATA_PATH)
     new_files.append(zipped_path)
     with zipfile.ZipFile(zipped_path, 'r', zipfile.ZIP_DEFLATED) as archive:
         l = archive.infolist()
@@ -40,7 +51,7 @@ def test_zip():
 
 
 def test_gzip():
-    zipped_path = encodings._gzip(DATA_PATH)
+    zipped_path = gz.encode(DATA_PATH)
     new_files.append(zipped_path)
     with gzip.open(zipped_path, 'r') as archive:
         text = archive.read()
@@ -48,7 +59,7 @@ def test_gzip():
 
 
 def test_bz2():
-    zipped_path = encodings._bz2(DATA_PATH)
+    zipped_path = bzip2.encode(DATA_PATH)
     new_files.append(zipped_path)
     with bz2.BZ2File(zipped_path, 'r') as archive:
         text = archive.read()
@@ -58,7 +69,7 @@ def test_bz2():
 def test_pair_0():
     assert_equal(
         [('0', ['1', '2', '3', '4', '5'])],
-        encodings.__pair(['0', '1', '2', '3', '4', '5'], 0)
+        utilities.__pair(['0', '1', '2', '3', '4', '5'], 0)
     )
 
 
@@ -70,7 +81,7 @@ def test_pair_1():
          ('3', ['4']),
          ('4', ['5']),
          ('5', [])],
-        encodings.__pair(['0', '1', '2', '3', '4', '5'], 1)
+        utilities.__pair(['0', '1', '2', '3', '4', '5'], 1)
     )
 
 
@@ -79,7 +90,7 @@ def test_pair_2():
         [('0', ['1']),
          ('2', ['3']),
          ('4', ['5'])],
-        encodings.__pair(['0', '1', '2', '3', '4', '5'], 2)
+        utilities.__pair(['0', '1', '2', '3', '4', '5'], 2)
     )
 
 
@@ -87,7 +98,7 @@ def test_pair_3():
     assert_equal(
         [('0', ['1', '2']),
          ('3', ['4', '5'])],
-        encodings.__pair(['0', '1', '2', '3', '4', '5'], 3)
+        utilities.__pair(['0', '1', '2', '3', '4', '5'], 3)
     )
 
 
@@ -95,7 +106,7 @@ def test_pair_4():
     assert_equal(
         [('0', ['1', '2', '3']),
          ('4', ['5'])],
-        encodings.__pair(['0', '1', '2', '3', '4', '5'], 4)
+        utilities.__pair(['0', '1', '2', '3', '4', '5'], 4)
     )
 
 
@@ -103,14 +114,14 @@ def test_pair_5():
     assert_equal(
         [('0', ['1', '2', '3', '4']),
          ('5', [])],
-        encodings.__pair(['0', '1', '2', '3', '4', '5'], 5)
+        utilities.__pair(['0', '1', '2', '3', '4', '5'], 5)
     )
 
 
 def test_pair_6():
     assert_equal(
         [('0', ['1', '2', '3', '4', '5'])],
-        encodings.__pair(['0', '1', '2', '3', '4', '5'], 6)
+        utilities.__pair(['0', '1', '2', '3', '4', '5'], 6)
     )
 
 
@@ -133,28 +144,28 @@ def diff_patch(base, patch):
 
 
 def test_diffe_from_first():
-    diffed_file = encodings.diffe(DATA_PATH, iframe_every=0)
+    diffed_file = diffe.encode(DATA_PATH, iframe_every=0)
     new_files.append(diffed_file)
     with open(diffed_file, 'r') as fd:
         files = fd.read()
-        files = files.split(encodings.RECORD_SEPARATOR)
+        files = files.split(utilities.RECORD_SEPARATOR)
         restored_text = files[0]
         for f in files[1:]:
-            restored_text += encodings.RECORD_SEPARATOR
+            restored_text += utilities.RECORD_SEPARATOR
             restored_text += diff_patch(files[0], f)
         assert_equal(restored_text, orig_text)
 
 
 def test_diffe_from_previous():
-    diffed_file = encodings.diffe(DATA_PATH, iframe_every=1)
+    diffed_file = diffe.encode(DATA_PATH, iframe_every=1)
     new_files.append(diffed_file)
     with open(diffed_file, 'r') as fd:
         files = fd.read()
-        files = files.split(encodings.RECORD_SEPARATOR)
+        files = files.split(utilities.RECORD_SEPARATOR)
         restored_text = files[0]
         previous = restored_text
         for f in files[1:]:
-            restored_text += encodings.RECORD_SEPARATOR
+            restored_text += utilities.RECORD_SEPARATOR
             current = diff_patch(previous, f)
             restored_text += current
             previous = current
@@ -162,25 +173,25 @@ def test_diffe_from_previous():
 
 
 def tedst_diff_iframe_every_three():
-    diffed_file = encodings.diffe(DATA_PATH, iframe_every=3)
+    diffed_file = diffe.encode(DATA_PATH, iframe_every=3)
     new_files.append(diffed_file)
     with open(diffed_file, 'r') as fd:
         files = fd.read()
-        files = files.split(encodings.RECORD_SEPARATOR)
+        files = files.split(utilities.RECORD_SEPARATOR)
         restored_text = files[0]
-        restored_text += encodings.RECORD_SEPARATOR
+        restored_text += utilities.RECORD_SEPARATOR
         restored_text += diff_patch(files[0], files[1])
-        restored_text += encodings.RECORD_SEPARATOR
+        restored_text += utilities.RECORD_SEPARATOR
         restored_text += diff_patch(files[0], files[2])
         for i in xrange(3, len(files), 3):
-            restored_text += encodings.RECORD_SEPARATOR
+            restored_text += utilities.RECORD_SEPARATOR
             restored_text += files[i]
             try:
                 text = diff_patch(files[i], files[i+1])
-                restored_text += encodings.RECORD_SEPARATOR
+                restored_text += utilities.RECORD_SEPARATOR
                 restored_text += text
                 text = diff_patch(files[i], files[i+2])
-                restored_text += encodings.RECORD_SEPARATOR
+                restored_text += utilities.RECORD_SEPARATOR
                 restored_text += text
             except IndexError:
                 pass
@@ -188,7 +199,7 @@ def tedst_diff_iframe_every_three():
 
 
 def test_diff_gzip():
-    path = encodings.diffe_gzip(DATA_PATH, iframe_every=3)
+    path = diffe_gz.encode(DATA_PATH, iframe_every=3)
     new_files.append(path)
     new_files.append(path[0:-3])
     assert_true('i3.diffe.gz' in path)
@@ -211,14 +222,14 @@ def vcdiff_patch(source, delta):
 
 
 def test_vcdiff():
-    diffed_file = encodings.vcdiff(DATA_PATH, iframe_every=0)
+    diffed_file = vcdiff.encode(DATA_PATH, iframe_every=0)
     new_files.append(diffed_file)
     with open(diffed_file, 'r') as fd:
         files = fd.read()
-        files = files.split(encodings.RECORD_SEPARATOR)
+        files = files.split(utilities.RECORD_SEPARATOR)
         restored_text = files[0]
         for f in files[1:]:
-            restored_text += encodings.RECORD_SEPARATOR
+            restored_text += utilities.RECORD_SEPARATOR
             restored_text += vcdiff_patch(files[0], f)
         assert_equal(restored_text, orig_text)
 
@@ -244,13 +255,13 @@ def bsdiff_patch(source, delta):
 
 
 def test_bsdiff():
-    diffed_file = encodings.bsdiff(DATA_PATH, iframe_every=0)
+    diffed_file = bsdiff.encode(DATA_PATH, iframe_every=0)
     new_files.append(diffed_file)
     with open(diffed_file, 'r') as fd:
         files = fd.read()
-        files = files.split(encodings.RECORD_SEPARATOR)
+        files = files.split(utilities.RECORD_SEPARATOR)
         restored_text = files[0]
         for f in files[1:]:
-            restored_text += encodings.RECORD_SEPARATOR
+            restored_text += utilities.RECORD_SEPARATOR
             restored_text += bsdiff_patch(files[0], f)
         assert_equal(restored_text, orig_text)

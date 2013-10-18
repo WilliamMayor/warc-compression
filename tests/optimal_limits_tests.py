@@ -1,5 +1,5 @@
 from nose.tools import assert_equal
-from warcompress.experiments.encodings import (
+from warcompress.encodings.compression.optimal import (
     __build_tree,
     __calculate_entropy,
     __random_text

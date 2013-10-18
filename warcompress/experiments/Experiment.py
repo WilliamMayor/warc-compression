@@ -4,12 +4,23 @@ Generate experimental data using the base.txt as a starting point
 Creates directories of files that represent changes over time of the base file
 """
 import os
-import itertools
 from operator import itemgetter
 from tabulate import tabulate
 
-from Config import Config
-from warcompress.experiments import encodings
+from warcompress.Config import Config
+from warcompress.encodings import raw
+from warcompress.encodings.compression import (
+    _zip,
+    gz,
+    bzip2,
+    optimal
+)
+from warcompress.encodings.delta import (
+    bsdiff,
+    diffe,
+    diffe_gz,
+    vcdiff
+)
 
 
 class Experiment:
@@ -40,26 +51,51 @@ class Experiment:
         else:
             return str(n) + {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, "th")
 
+    def __run_test(self, name, module, *args):
+        print '           ', name
+        compressed_data_path = module.encode(self.data_path, *args)
+        self.update_averages(name, compressed_data_path)
+
     def test(self):
-        print '        running compression tests'
-        for name, encode in encodings.compression.iteritems():
-            print '           ', name
-            compressed_data_path = encode(self.data_path)
-            self.update_averages(name, compressed_data_path)
-        for n in xrange(0, 10):
-            name = '%s order optimal' % self.__ordinal(n)
-            print '           ', name
-            compressed_data_path = encodings.n_order_optimal(self.data_path, n)
-            self.update_averages(name, compressed_data_path)
-        names = encodings.diff.keys()
-        iframes_every = [0, 1, 2, 5, 10]
-        for (n, d) in itertools.product(names, iframes_every):
-            name = ''.join(['            ',
-                            '%s, ' % n,
-                            'iframe every %d' % d])
-            print name
-            diff_data_path = encodings.diff[n](self.data_path, d)
-            self.update_averages(name, diff_data_path)
+        print '        running encoding tests'
+        iframe_options = [0, 1, 2, 5, 10]
+        tests = [
+            # (name, module, options)
+            ('raw',
+             raw,
+             None),
+            ('bz2',
+             bzip2,
+             None),
+            ('gzip',
+             gz,
+             None),
+            ('zip',
+             _zip,
+             None),
+            ('{o} order optimal',
+             optimal,
+             xrange(0, 10)),
+            ('bsdiff, iframe @ {o}',
+             bsdiff,
+             iframe_options),
+            ('diffe, iframe @ {o}',
+             diffe,
+             iframe_options),
+            ('diffe_gz, iframe @ {o}',
+             diffe_gz,
+             iframe_options),
+            ('vcdiff, iframe @ {o}',
+             vcdiff,
+             iframe_options)
+        ]
+        for (name, module, options) in tests:
+            if options is None:
+                self.__run_test(name, module)
+            else:
+                for o in options:
+                    new_name = name.format(o=o)
+                    self.__run_test(new_name, module, o)
         self.summary.save()
 
     def update_averages(self, name, data_path):
@@ -92,10 +128,12 @@ class Experiment:
             data.append([name, mean, variance])
         data = sorted(data, key=itemgetter(1))
         for row in data:
-            row.append(100.0 * float(row[1]) / raw_mean)
+            row.append((100.0 * row[1]) / raw_mean)
+            row.append((100.0 * row[1]) / data[0][1])
         headers = [
             'encoding',
             'mean size',
             'size variance',
-            '% of raw']
+            '% of raw',
+            '% of best']
         print tabulate(data, headers, floatfmt=".2f")
