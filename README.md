@@ -46,7 +46,13 @@ Here's an example of how to run an experiment that takes a couple of paragraphs 
 
     python CLONE_PATH/warcompress/experiments/single_char_delete.py CLONE_PATH/data/lorem.txt CLONE_PATH/data/lorem/
 
+## Modifiers
 
+The `warcompress.modifiers` package provides many modules that randomly modify data. They can do this in an intelligent way; understanding the format and content of the data and modifying whilst keeping the data valid.
+
+### Text Modifiers
+
+Text modifiers have very little understanding of the text they modify. They randomly select character positions in the text and modify in single groups of characters. For instance, the delete modifier will remove a single block of characters at a time. The `modify` method takes a second argument that represents the percentage of the original text to modify. This argument defaults to 1%.
 
 
 
