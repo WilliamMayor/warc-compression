@@ -1,0 +1,6 @@
+clueweb-sample.warc: http://lemurproject.org/
+image.gif: http://static.bbci.co.uk/h4drawers/0.66.1/img/h4drawers-sprite.gif
+image.jpg: http://static.bbci.co.uk/h4discoveryzone/ic/newsimg/media/images/473/436/70565000/jpg/_70565205_kate-heels_181013_el.jpg
+image.png: http://static.bbci.co.uk/h4discoveryzone/0.233.0/img/icon_sprites.png
+javascript.js: http://static.bbci.co.uk/frameworks/jquery/0.3.0/sharedmodules/jquery-1.7.2.js
+stylesheet.css: http://static.bbci.co.uk/h4discoveryzone/0.233.0/style/h4discoveryzone.css
