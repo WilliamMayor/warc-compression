@@ -41,7 +41,7 @@ class TextInsert:
                 max(0, len(modified) - self.blocksize)
             )
             new_chars = [random.choice(text) for _ in xrange(self.blocksize)]
-            modified = text[:position] + ''.join(new_chars) + text[position:]
+            modified = modified[:position] + ''.join(new_chars) + modified[position:]
             yield modified
 
 
