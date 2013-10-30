@@ -48,7 +48,10 @@ class CssDelete:
             for rule in styleRules:
                 total += len(rule.style.keys())
             i = total - 1
-            remove_indexes = random.sample(xrange(0, total), self.to_remove)
+            remove_indexes = random.sample(
+                xrange(0, total),
+                min(total, self.to_remove)
+            )
             for rule in styleRules[::-1]:
                 for key in list(rule.style.keys())[::-1]:
                     if i in remove_indexes:

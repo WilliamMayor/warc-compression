@@ -3,32 +3,48 @@ import string
 from nose.tools import assert_in, assert_equals
 
 from warcompress.modifiers.css import (
-    remove_rule,
-    remove_declaration
+    CssDelete,
+    CssInsertDeclaration,
+    CssInsertRule
 )
 
 
-def test_remove_rule():
+def test_delete():
     text = 'h1{color:blue}h2{color:red}'
-    modified = remove_rule.modify(text, 0.5).translate(None, string.whitespace)
+    modifier = CssDelete().modify(text)
+    modified = modifier.next()
+    modified = modifier.next()
+    modified = modified.translate(None, string.whitespace)
     assert_in(modified, ['h1{color:blue}', 'h2{color:red}'])
 
 
-def test_remove_rule_all():
+def test_delete_all():
     text = 'h1{color:blue}h2{color:red}'
-    modified = remove_rule.modify(text, 1).translate(None, string.whitespace)
-    assert_equals(modified, '')
+    modifier = CssDelete().modify(text)
+    for modified in modifier:
+        modified = modified.translate(None, string.whitespace)
+    assert_equals('', modified)
 
 
-def test_remove_declaration():
-    text = 'h1{color:blue;font-size:2em}'
-    modified = remove_declaration.modify(text, 0.5)
+def test_insert_declaration():
+    text = 'h1{color:blue}h2{color:red}'
+    modifier = CssInsertDeclaration().modify(text)
+    modified = modifier.next()
+    modified = modifier.next()
     modified = modified.translate(None, string.whitespace)
-    assert_in(modified, ['h1{color:blue}', 'h1{font-size:2em}'])
+    assert_in(modified, ['h1{color:blue;color:red}h2{color:red}',
+                         'h1{color:blue;color:blue}h2{color:red}',
+                         'h1{color:blue}h2{color:red;color:blue}',
+                         'h1{color:blue}h2{color:red;color:red}'])
 
 
-def test_remove_declaration_empty():
-    text = 'h1{color:blue;font-size:2em}'
-    modified = remove_declaration.modify(text, 1)
+def test_insert_rule():
+    text = 'h1{color:blue}h2{color:red}'
+    modifier = CssInsertRule().modify(text)
+    modified = modifier.next()
+    modified = modifier.next()
     modified = modified.translate(None, string.whitespace)
-    assert_equals(modified, '')
+    assert_in(modified, ['h1{color:blue}h2{color:red}h1{color:blue}',
+                         'h1{color:blue}h2{color:red}h1{color:red}',
+                         'h1{color:blue}h2{color:red}h2{color:blue}',
+                         'h1{color:blue}h2{color:red}h2{color:red}'])
