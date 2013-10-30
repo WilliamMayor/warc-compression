@@ -42,14 +42,17 @@ def save_done(path, done):
 
 
 def rate_limit(response):
-    headers = response.headers
-    rate_limit = int(headers['x-ratelimit-remaining'])
-    now = int(time.time())
-    reset = int(headers['x-ratelimit-reset'])
-    wait = reset - now + 1
-    if rate_limit == 0 and wait > 0:
-        print 'Hit Search API rate limit, waiting for %d secs' % wait
-        time.sleep(wait)
+    try:
+        headers = response.headers
+        rate_limit = int(headers['x-ratelimit-remaining'])
+        now = int(time.time())
+        reset = int(headers['x-ratelimit-reset'])
+        wait = reset - now + 1
+        if rate_limit == 0 and wait > 0:
+            print 'Hit Search API rate limit, waiting for %d secs' % wait
+            time.sleep(wait)
+    except:
+        time.sleep(30)
 
 
 def next_url(url, response):
