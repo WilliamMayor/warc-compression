@@ -57,7 +57,7 @@ def rate_limit(response):
 
 def next_url(url, response):
     try:
-        response.headers['link']['next']
+        response.links['next']['url']
         url['page'] = url['page'] + 1
     except:
         url['page'] = 1
