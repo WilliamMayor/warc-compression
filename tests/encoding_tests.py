@@ -209,11 +209,11 @@ def vcdiff_patch(source, delta):
     base_path = os.path.join(MODULE_DIR, 'vcpatch_base')
     with open(base_path, 'w') as fd:
         fd.write(source)
-    #new_files.append(base_path)
+    new_files.append(base_path)
     patch_path = os.path.join(MODULE_DIR, 'vcpatch')
     with open(patch_path, 'w') as fd:
         fd.write(delta)
-    #new_files.append(patch_path)
+    new_files.append(patch_path)
     return subprocess.check_output(
         ['vcdiff patch -dictionary %s -delta %s' % (base_path, patch_path)],
         shell=True,
@@ -223,7 +223,7 @@ def vcdiff_patch(source, delta):
 
 def test_vcdiff():
     diffed_file = vcdiff.encode(DATA_PATH, iframe_every=0)
-    #new_files.append(diffed_file)
+    new_files.append(diffed_file)
     with open(diffed_file, 'r') as fd:
         files = fd.read()
         files = files.split(utilities.RECORD_SEPARATOR)
