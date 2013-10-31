@@ -33,6 +33,9 @@ from warcompress.modifiers.css import ( # NOQA
     CssInsertDeclaration,
     CssInsertRule
 )
+from warcompress.modifiers.image import ( # NOQA
+    ImageShrink
+)
 from warcompress.modifiers.identity import Identity # NOQA
 
 
