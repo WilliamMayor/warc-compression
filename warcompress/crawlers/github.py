@@ -95,8 +95,9 @@ def crawl(dest_dir):
     while url is not None:
         u = build_url(url)
         print 'Searching', u
-        response = requests.get(u, headers=HEADERS)
+        response = None
         try:
+            response = requests.get(u, headers=HEADERS)
             repos = response.json()['items']
             print '  Found', len(repos)
             sys.stdout.write('  ')
@@ -117,11 +118,13 @@ def crawl(dest_dir):
             sys.stdout.write('\n')
             save_done(done_path, done)
             url = next_url(url, response)
+            rate_limit(response)
+        except requests.exceptions.ConnectionError:
+            time.sleep(60*5)
         except Exception as e:
             print 'There was an error:', e
             print 'GitHub response:'
             print response
-        rate_limit(response)
 
 
 def git_rev_list(path):
