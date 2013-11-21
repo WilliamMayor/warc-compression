@@ -34,7 +34,11 @@ from warcompress.modifiers.css import ( # NOQA
     CssInsertRule
 )
 from warcompress.modifiers.image import ( # NOQA
-    ImageShrink
+    ImageScale,
+    ImageRotate,
+    ImageCrop,
+    ImageGrayScale,
+    ImageModulate
 )
 from warcompress.modifiers.identity import Identity # NOQA
 
