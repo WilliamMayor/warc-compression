@@ -324,6 +324,7 @@ def process(data_dir):
                 print '  Processing', name
                 if name in done:
                     print '    Already archived'
+                    continue
                 repo_path = os.path.join(user_path, repo)
                 process_repo(repo_path, name)
                 done.add(name)
