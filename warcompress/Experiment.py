@@ -146,6 +146,7 @@ class Experiment:
         print '-------'
         print 'Base data:', self.summary.get('overall', 'base_path')
         print 'Modifier:', self.summary.get('overall', 'modifier_name')
+        print 'Trial Count:', self.summary.get('overall', 'trial_count')
         print ''
         print 'Results:'
         data = []
@@ -178,7 +179,7 @@ def run(args):
     modifier_name = args[2]
     modifier = globals()[modifier_name](*args[3:])
     e = Experiment(base_path, modifier, data_dir)
-    e.run()
+    e.run(10)
 
 
 def summarise(path):
@@ -198,7 +199,7 @@ def help():
         'DEST_DIR - The directory that experimental data should be stored in. This directory will be created if it does not already exist', # NOQA
         'MODIFIER - The name of the modifier to use to generate data. See below', # NOQA
         ''
-        'e.g. python warcompress/Experiment.py data/lorem.txt data/lorem/substitute/ 10 10', # NOQA
+        'e.g. python warcompress/Experiment.py data/lorem.txt data/lorem/substitute/ TextSubstitute 10 10', # NOQA
         '',
         'Modifiers:',
         '  Identity [REPEAT]',
