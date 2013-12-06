@@ -207,7 +207,7 @@ def commit_date(path, commit):
 
 
 def rewrite_warc(name, port, date):
-    h = hapy.Hapy(HERITRIX_URL, username='admin', password='admin')
+    h = hapy.Hapy(HERITRIX_URL, username='admin', password=sys.argv[2])
     info = h.get_job_info(name)
     job_path = os.path.dirname(info['job']['primaryConfig'])
     warcs_dir = os.path.join(job_path, 'latest', 'warcs')
@@ -231,7 +231,7 @@ def rewrite_warc(name, port, date):
 
 
 def heritrix_crawl(name):
-    h = hapy.Hapy(HERITRIX_URL, username='admin', password='admin')
+    h = hapy.Hapy(HERITRIX_URL, username='admin', password=sys.argv[2])
     try:
         print '        Building'
         h.build_job(name)
@@ -296,7 +296,7 @@ def process_commit(repo_path, name, commit, port, attempts=5):
 
 def process_repo(repo_path, name):
     print '    Creating heritrix job'
-    h = hapy.Hapy(HERITRIX_URL, username='admin', password='admin')
+    h = hapy.Hapy(HERITRIX_URL, username='admin', password=sys.argv[2])
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind(('', 0))
     port = s.getsockname()[1]
