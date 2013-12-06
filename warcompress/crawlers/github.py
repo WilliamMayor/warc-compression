@@ -128,7 +128,7 @@ def crawl(dest_dir, from_):
             url = next_url(url, response)
             rate_limit(response)
         except requests.exceptions.ConnectionError:
-            time.sleep(60*5)
+            time.sleep(60 * 5)
         except Exception as e:
             print 'There was an error:', e
             print 'GitHub response:'
@@ -200,7 +200,10 @@ def commit_date(path, commit):
         '--format="%ci"',
         commit
     ]
-    return datetime.datetime.strptime(subprocess.check_output(args, cwd=path)[1:20],'%Y-%m-%d %H:%M:%S')
+    return datetime.datetime.strptime(
+        subprocess.check_output(args, cwd=path)[1:20],
+        '%Y-%m-%d %H:%M:%S'
+    )
 
 
 def rewrite_warc(name, port, date):
@@ -213,8 +216,15 @@ def rewrite_warc(name, port, date):
         gzr = gzip.open(path, 'r')
         content = gzr.read()
         gzr.close()
-        content = content.replace('http://localhost:%d' % port, 'http://%s' % name)
-        content = re.sub('^WARC-Date: .*?\n', 'WARC-Date: %s\n' % date.isoformat(), content, flags=re.MULTILINE)
+        content = content.replace(
+            'http://localhost:%d' % port,
+            'http://%s' % name
+        )
+        content = re.sub(
+            '^WARC-Date: .*?\n', 'WARC-Date: %s\n' % date.isoformat(),
+            content,
+            flags=re.MULTILINE
+        )
         gzw = gzip.open(path, 'w')
         gzw.write(content)
         gzw.close()
@@ -291,7 +301,9 @@ def process_repo(repo_path, name):
     s.bind(('', 0))
     port = s.getsockname()[1]
     s.close()
-    cxml = resource_string('warcompress', 'assets/template.cxml').replace('WC_PORT', str(port))
+    cxml = resource_string(
+        'warcompress',
+        'assets/template.cxml').replace('WC_PORT', str(port))
     h.create_job(name)
     h.submit_configuration(name, cxml)
     wait_for(h, name, 'build')
@@ -299,13 +311,11 @@ def process_repo(repo_path, name):
         process_commit(repo_path, name, commit, port)
     git_checkout(repo_path, 'master')
 
-                    
 
 def process(data_dir):
     print 'Processing crawled data'
     done_path = os.path.join(data_dir, 'archived.txt')
     done = load_done(done_path)
-    h = hapy.Hapy(HERITRIX_URL, username='admin', password='admin')
     for user in os.walk(data_dir).next()[1]:
         user_path = os.path.join(data_dir, user)
         for repo in os.walk(user_path).next()[1]:
@@ -318,6 +328,7 @@ def process(data_dir):
                 process_repo(repo_path, name)
                 done.add(name)
                 save_done(done_path, done)
+                return
             except Exception as e:
                 print '    Error', str(e)
 
@@ -332,7 +343,11 @@ def safe_get(l, i, d):
 if __name__ == '__main__':
     data_dir = sys.argv[2]
     if sys.argv[1] == 'crawl':
-        from_ = (safe_get(sys.argv, 2, 2008), safe_get(sys.argv, 3, 12), safe_get(sys.argv, 3, 17))
+        from_ = (
+            safe_get(sys.argv, 2, 2008),
+            safe_get(sys.argv, 3, 12),
+            safe_get(sys.argv, 4, 17)
+        )
         crawl(data_dir, from_)
     elif sys.argv[1] == 'process':
         process(data_dir)
