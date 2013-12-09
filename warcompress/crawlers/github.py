@@ -216,10 +216,6 @@ def rewrite_warc(name, port, date):
         gzr = gzip.open(path, 'r')
         content = gzr.read()
         gzr.close()
-        content = content.replace(
-            'http://localhost:%d' % port,
-            'http://%s' % name
-        )
         content = re.sub(
             '^WARC-Date: .*?\n', 'WARC-Date: %s\n' % date.isoformat(),
             content,
