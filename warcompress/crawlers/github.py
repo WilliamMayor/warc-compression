@@ -206,7 +206,7 @@ def commit_date(path, commit):
     )
 
 
-def rewrite_warc(name, port, date):
+def rewrite_warc(name, date):
     h = hapy.Hapy(HERITRIX_URL, username='admin', password=sys.argv[3])
     info = h.get_job_info(name)
     job_path = os.path.dirname(info['job']['primaryConfig'])
@@ -271,7 +271,7 @@ def process_commit(repo_path, name, commit, port, attempts=5):
         p = jekyll_serve(repo_path, port)
         print '      Running heritrix job'
         heritrix_crawl(name)
-        rewrite_warc(name, port, commit_date(repo_path, commit))
+        rewrite_warc(name, commit_date(repo_path, commit))
         return
     finally:
         try:
@@ -335,7 +335,6 @@ def safe_get(l, i, d):
         return l[i]
     except:
         return d
-
 
 if __name__ == '__main__':
     data_dir = sys.argv[2]
