@@ -173,6 +173,15 @@ http://localhost:WC_PORT
            </list>
           </property> -->
     </bean>
+    <bean class="org.archive.modules.deciderules.NotMatchesListRegexDecideRule">
+          <property name="decision" value="REJECT"/>
+          <property name="listLogicalOr" value="true" />
+          <property name="regexList">
+           <list>
+            <value>^http://localhost:WC_PORT.*</value>
+           </list>
+          </property>
+    </bean>
     <!-- ...and REJECT those with suspicious repeating path-segments... -->
     <bean class="org.archive.modules.deciderules.PathologicalPathDecideRule">
      <!-- <property name="maxRepetitions" value="2" /> -->
