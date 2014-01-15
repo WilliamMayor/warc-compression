@@ -17,29 +17,32 @@ Processing involves:
 
 
 """
-MAX_TIME = 4*60*60
-HERITRIX_JOBS_DIR = '/cs/research//fmedia/data5/wmayor/github/heritrix-3.1.1/jobs'  # NOQA
-DONE_PATH = '/home/wmayor/done.txt'
-DATA_DIR = '/scratch0'
+import os
+import sqlite3
+import time
+import shutil
 
-DELTA_FUNCS = [
-    ('no_delta', raw),
-    ('bsdiff@first', lambda x: bsdiff(x, first=True)),
-    ('bsdiff@previous', lambda x: bsdiff(x, previous=True)),
-    ('bsdiff@2', lambda x: bsdiff(x, iframe=2)),
-    ('bsdiff@5', lambda x: bsdiff(x, iframe=5)),
-    ('bsdiff@10', lambda x: bsdiff(x, iframe=10)),
-    ('vcdiff@first', lambda x: vcdiff(x, first=True)),
-    ('vcdiff@previous', lambda x: vcdiff(x, previous=True)),
-    ('vcdiff@2', lambda x: vcdiff(x, iframe=2)),
-    ('vcdiff@5', lambda x: vcdiff(x, iframe=5)),
-    ('vcdiff@10', lambda x: vcdiff(x, iframe=10)),
-    ('diffe@first', lambda x: diffe(x, first=True)),
-    ('diffe@previous', lambda x: diffe(x, previous=True)),
-    ('diffe@2', lambda x: diffe(x, iframe=2)),
-    ('diffe@5', lambda x: diffe(x, iframe=5)),
-    ('diffe@10', lambda x: diffe(x, iframe=10))
-]
+import compress
+import filterer
+import indexer
+import delta
+from WARC import WARC
+
+MAX_TIME = 4*60*60
+#HERITRIX_JOBS_DIR = '/cs/research/fmedia/data5/wmayor/github/heritrix-3.1.1/jobs'  # NOQA
+#DONE_PATH = '/home/wmayor/done.txt'
+#DATA_DIR = '/scratch0'
+HERITRIX_JOBS_DIR = '/Users/william/Projects/warc-compression/experiments/heritrix/test_data/heritrix/jobs'  # NOQA
+HOME_PATH = '/Users/william/Projects/warc-compression/experiments/heritrix/test_data/wmayor'  # NOQA
+DATA_DIR = '/Users/william/Projects/warc-compression/experiments/heritrix/test_data/scratch0/wmayor'  # NOQA
+
+
+def list_done():
+    try:
+        with open(os.path.join(HOME_PATH, 'done.txt'), 'r') as fd:
+            return [line.rstrip('\n') for line in fd]
+    except:
+        return []
 
 
 def list_available(jobs_dir):
@@ -52,45 +55,31 @@ def list_available(jobs_dir):
 
 
 def main():
-    with open(DONE_PATH, 'r') as fd:
-        done = [line.rstrip('\n') for line in fd]
-    raw_path = os.path.join(
-        DATA_DIR,
-        'no_delta',
-        'no_compression',
-        'warcs'
-    )
-    raw_index = os.path.join(
-        DATA_DIR,
-        'no_delta',
-        'no_compression',
-        'index.db'
-    )
-    for available in list_available(HERITRIX_JOBS_DIR):
-        if available not in done:
-            for warc in list_warcs(available):
-                filter_and_copy_records(
-                    warc,
-                    os.path.join(
-                        raw_path,
-                        os.path.basename(warc)))
-            warcs = list_warcs(raw_path)
-            for name, delta_func in DELTA_FUNCS:
-                to_dir = os.path.join(
-                    DATA_DIR,
-                    name,
-                    'no_compression',
-                    'warcs')
-                index_path = os.path.join(
-                    DATA_DIR,
-                    name,
-                    'index.db')
-                delta_func(warcs, to_dir, raw_index)
-                index(to_dir, index_path)
-                compress(to_dir)
-            for warc in list_warcs(raw_path):
-                index(warc, raw_index)
-            compress(raw_path, raw_index)
+    total_time = 0
+    jobs_processed = 0
+    done = list_done()
+    nd_path = os.path.join(DATA_DIR, 'no_delta')
+    nd_nc_path = os.path.join(nd_path, 'no_compression')
+    nd_index = os.path.join(HOME_PATH, 'no_delta', 'index.db')
+    for job in [j for j in list_available(HERITRIX_JOBS_DIR) if j not in done]:
+        tick = time.time()
+        filterer.localhost(job, nd_nc_path)
+        compress.all_the_things(nd_nc_path, nd_path)
+        indexer.index(nd_nc_path, nd_index)
+        for d in delta.all_the_things(nd_nc_path, DATA_DIR, nd_index):
+            d_path = os.path.join(DATA_DIR, d)
+            d_nc_path = os.path.join(d_path, 'no_compression')
+            d_index = os.path.join(HOME_PATH, d, 'index.db')
+            compress.all_the_things(d_nc_path, d_path)
+            indexer.index(d_nc_path, d_index)
+        shutil.rmtree(DATA_DIR)
+        total_time += tick - time.time()
+        jobs_processed += 1
+        average_time = total_time / jobs_processed
+        if total_time + 2 * average_time > MAX_TIME:
+            break
+    print 'Processed %d jobs' % jobs_processed
+    print 'It took %d hours' % (total_time / (60 * 60))
 
 
 if __name__ == '__main__':
