@@ -18,7 +18,6 @@ Processing involves:
 
 """
 import os
-import sqlite3
 import time
 import shutil
 
@@ -26,15 +25,15 @@ import compress
 import filterer
 import indexer
 import delta
-from WARC import WARC
+import meta
 
 MAX_TIME = 4*60*60
 #HERITRIX_JOBS_DIR = '/cs/research/fmedia/data5/wmayor/github/heritrix-3.1.1/jobs'  # NOQA
 #DONE_PATH = '/home/wmayor/done.txt'
-#DATA_DIR = '/scratch0'
-HERITRIX_JOBS_DIR = '/Users/william/Projects/warc-compression/experiments/heritrix/test_data/heritrix/jobs'  # NOQA
-HOME_PATH = '/Users/william/Projects/warc-compression/experiments/heritrix/test_data/wmayor'  # NOQA
-DATA_DIR = '/Users/william/Projects/warc-compression/experiments/heritrix/test_data/scratch0/wmayor'  # NOQA
+#DATA_DIR = '/scratch0/wmayor'
+HERITRIX_JOBS_DIR = '/Users/william/Desktop/test_data/quick/heritrix/jobs'  # NOQA
+HOME_PATH = '/Users/william/Desktop/test_data/quick/wmayor'  # NOQA
+DATA_DIR = '/Users/william/Desktop/test_data/quick/scratch0/wmayor'  # NOQA
 
 
 def list_done():
@@ -72,14 +71,18 @@ def main():
             d_index = os.path.join(HOME_PATH, d, 'index.db')
             compress.all_the_things(d_nc_path, d_path)
             indexer.index(d_nc_path, d_index)
+        meta.all_the_things(HOME_PATH)
+        done.append(job)
         shutil.rmtree(DATA_DIR)
-        total_time += tick - time.time()
+        total_time += time.time() - tick
         jobs_processed += 1
         average_time = total_time / jobs_processed
         if total_time + 2 * average_time > MAX_TIME:
             break
-    print 'Processed %d jobs' % jobs_processed
-    print 'It took %d hours' % (total_time / (60 * 60))
+    with open(os.path.join(HOME_PATH, 'done.txt'), 'r') as fd:
+        fd.write('\n'.join(done))
+    print('Processed %d jobs' % jobs_processed)
+    print('It took %d hours' % (total_time / (60 * 60)))
 
 
 if __name__ == '__main__':

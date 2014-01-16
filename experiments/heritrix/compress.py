@@ -15,7 +15,7 @@ def _relative_paths(from_dir):
 
 
 def gzip_(from_dir, to_dir):
-    print '    Using gzip_'
+    print('    Using gzip')
     to = os.path.join(to_dir, 'gzip')
     for rel_path in _relative_paths(from_dir):
         old_path = os.path.join(from_dir, rel_path)
@@ -28,7 +28,7 @@ def gzip_(from_dir, to_dir):
 
 
 def zip_(from_dir, to_dir):
-    print '    Using zip_'
+    print('    Using zip')
     to = os.path.join(to_dir, 'zip')
     for rel_path in _relative_paths(from_dir):
         old_path = os.path.join(from_dir, rel_path)
@@ -39,7 +39,7 @@ def zip_(from_dir, to_dir):
 
 
 def bzip2(from_dir, to_dir):
-    print '    Using bzip2'
+    print('    Using bzip2')
     to = os.path.join(to_dir, 'bzip2')
     for rel_path in _relative_paths(from_dir):
         old_path = os.path.join(from_dir, rel_path)
@@ -53,7 +53,7 @@ def bzip2(from_dir, to_dir):
 
 
 def targz(from_dir, to_dir):
-    print '    Using tar.gz'
+    print('    Using tar.gz')
     to = os.path.join(to_dir, 'archive.tar.gz')
     ensure_dirs(to)
     tar = tarfile.open(to, "w:gz")
@@ -64,7 +64,7 @@ def targz(from_dir, to_dir):
 
 
 def tarbzip2(from_dir, to_dir):
-    print '    Using tar.bzip2'
+    print('    Using tar.bzip2')
     to = os.path.join(to_dir, 'archive.tar.bz2')
     ensure_dirs(to)
     tar = tarfile.open(to, "w:bz2")
@@ -75,7 +75,7 @@ def tarbzip2(from_dir, to_dir):
 
 
 def all_the_things(from_dir, to_dir):
-    print 'Compressing files in', from_dir
+    print('Compressing files in', from_dir)
     for f in [gzip_, zip_, bzip2, targz, tarbzip2]:
         f(from_dir, to_dir)
 

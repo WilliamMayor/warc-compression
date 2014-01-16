@@ -28,7 +28,7 @@ def localhost(from_dir, to_dir):
         for f in filter(lambda n: n.endswith('.warc.gz'), files):
             keep_these = []
             wpath = os.path.join(root, f)
-            print ' ', wpath
+            print ' ', f
             for headers, content, _ in WARC(wpath).records():
                 total += 1
                 if _record_in_local_domain(headers):
@@ -40,8 +40,6 @@ def localhost(from_dir, to_dir):
                 if _record_is_related(headers, keep_these):
                     kept += 1
                     w.add_record(headers, content)
-                else:
-                    print '  Not keeping', headers
     print '    Found %d records' % total
     print '    Kept %d' % kept
 

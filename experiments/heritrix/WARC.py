@@ -1,3 +1,5 @@
+import bz2
+import zipfile
 import gzip
 
 import utilities
@@ -14,13 +16,22 @@ class WARC:
     def __init__(self, path):
         self.path = path
         self.gzipped = path.endswith('.gz')
+        self.zipped = path.endswith('.zip')
+        self.bzipped = path.endswith('.bz2')
+
+    def _open(self, mode):
+        if self.gzipped:
+            return gzip.open(self.path, mode)
+        elif self.zipped:
+            return zipfile.ZipFile(self.path, mode, zipfile.ZIP_DEFLATED)
+        elif self.bzipped:
+            return bz2.BZ2File(self.path, mode)
+        else:
+            return open(self.path, mode)
 
     def add_record(self, headers, content):
         utilities.ensure_dirs(self.path)
-        if self.gzipped:
-            fd = gzip.open(self.path, 'ab')
-        else:
-            fd = open(self.path, 'ab')
+        fd = self._open('ab')
         fd.write(WARC.OPENER)
         for f, v in headers.iteritems():
             fd.write(f)
@@ -33,15 +44,14 @@ class WARC:
         fd.close()
 
     def get_record(self, seek):
-        with open(self.path, 'rb') as fd:
-            fd.seek(seek)
-            return self._next_record(fd)
+        fd = self._open('rb')
+        fd.seek(seek)
+        headers, content = self._next_record(fd)
+        fd.close()
+        return headers, content
 
     def records(self):
-        if self.gzipped:
-            fd = gzip.open(self.path, 'rb')
-        else:
-            fd = open(self.path, 'rb')
+        fd = self._open('rb')
         offset = 0
         headers, content = self._next_record(fd)
         while None not in [headers, content]:
