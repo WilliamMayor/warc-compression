@@ -16,7 +16,8 @@ SCHEMA = """
         PRIMARY KEY(record_id, path)
     );
     CREATE TABLE IF NOT EXISTS metadata(
-        path TEXT,
+        directory TEXT,
+        filename TEXT,
         size INTEGER
     );
     CREATE INDEX IF NOT EXISTS record_uri ON record(uri);
@@ -42,9 +43,10 @@ INSERT_LOCATION = """
 """
 INSERT_METADATA = """
     INSERT INTO metadata(
-        path,
+        directory,
+        filename,
         size
-    ) VALUES(?, ?)
+    ) VALUES(?, ?, ?)
 """
 FIND_PREVIOUS_RESPONSES = """
     SELECT record_id
@@ -58,4 +60,17 @@ GET_LOCATION = """
     SELECT path, offset
     FROM LOCATION
     WHERE record_id = ?
+"""
+DISTINCT_LOCATIONS = """
+    SELECT DISTINCT path
+    FROM LOCATION
+"""
+FIND_IDENTICAL = """
+    SELECT record_id
+    FROM record
+    WHERE digest = ?
+        AND uri = ?
+        AND date < ?
+    ORDER BY date ASC
+    LIMIT 1
 """

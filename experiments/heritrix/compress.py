@@ -75,7 +75,7 @@ def tarbzip2(from_dir, to_dir):
 
 
 def all_the_things(from_dir, to_dir):
-    print('Compressing files in', from_dir)
+    print('Compressing files in ' + from_dir)
     for f in [gzip_, zip_, bzip2, targz, tarbzip2]:
         f(from_dir, to_dir)
 

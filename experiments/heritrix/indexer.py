@@ -2,6 +2,7 @@ import time
 import re
 import os
 import sqlite3
+import sys
 
 import utilities
 import sql
@@ -15,7 +16,7 @@ CT_REGEXP = re.compile(
 
 
 def index(dir_, db_path):
-    print('Indexing files in', dir_)
+    print('Indexing files in ' + dir_)
     utilities.ensure_dirs(db_path)
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
@@ -27,7 +28,8 @@ def index(dir_, db_path):
     for root, _, files in os.walk(dir_):
         for f in [f for f in files if f.endswith('.warc')]:
             path = os.path.join(root, f)
-            print('  ' + f)
+            sys.stdout.write('.')
+            sys.stdout.flush()
             for headers, content, offset in WARC(path).records():
                 cursor.execute(RID_EXISTS, (headers['WARC-Record-ID'], ))
                 if cursor.fetchone() is not None:
@@ -59,12 +61,11 @@ def index(dir_, db_path):
     try:
         time_taken = time.time() - tick
         average_time = int(time_taken / files_processed)
-        print('    Files processed: %d' % files_processed)
+        print('\n    Files processed: %d' % files_processed)
         print('    Time taken (seconds): %d' % int(time_taken))
         print('    Average time (seconds) per file: %d' % average_time)
     except ZeroDivisionError:
         pass
 
 if __name__ == '__main__':
-    import sys
     index(sys.argv[1], sys.argv[2])

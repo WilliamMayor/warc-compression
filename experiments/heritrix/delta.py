@@ -229,7 +229,8 @@ def all_the_things(from_dir, to_dir, index):
     cursor = sqlite3.connect(index).cursor()
     for root, dirs, files in os.walk(from_dir):
         for f in [f for f in files if f.endswith('.warc')]:
-            print('  ' + f)
+            sys.stdout.write('.')
+            sys.stdout.flush()
             abs_path = os.path.join(root, f)
             rel_path = abs_path.replace(from_dir, '', 1).lstrip('/')
             for headers, content, _ in WARC(abs_path).records():
@@ -244,6 +245,7 @@ def all_the_things(from_dir, to_dir, index):
                             w.add_record(d_headers, d_content)
                         else:
                             w.add_record(headers, content)
+    sys.stdout.write('\n')
     return NAMES
 
 

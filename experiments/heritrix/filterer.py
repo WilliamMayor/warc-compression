@@ -21,14 +21,15 @@ def _record_is_related(headers, allowed):
 
 
 def localhost(from_dir, to_dir):
-    print 'Filtering records in', from_dir
+    print('Filtering records in ' + from_dir)
     total = 0
     kept = 0
     for root, dirs, files in os.walk(from_dir):
         for f in filter(lambda n: n.endswith('.warc.gz'), files):
             keep_these = []
             wpath = os.path.join(root, f)
-            print ' ', f
+            sys.stdout.write('.')
+            sys.stdout.flush()
             for headers, content, _ in WARC(wpath).records():
                 total += 1
                 if _record_in_local_domain(headers):
@@ -40,8 +41,8 @@ def localhost(from_dir, to_dir):
                 if _record_is_related(headers, keep_these):
                     kept += 1
                     w.add_record(headers, content)
-    print '    Found %d records' % total
-    print '    Kept %d' % kept
+    print('\n    Found %d records' % total)
+    print('    Kept %d' % kept)
 
 if __name__ == '__main__':
     import sys
