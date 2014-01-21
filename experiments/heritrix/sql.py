@@ -16,9 +16,9 @@ SCHEMA = """
         PRIMARY KEY(record_id, path)
     );
     CREATE TABLE IF NOT EXISTS metadata(
-        directory TEXT,
-        filename TEXT,
-        size INTEGER
+        compression_type TEXT,
+        total_size INTEGER,
+        file_count INTEGER
     );
     CREATE INDEX IF NOT EXISTS record_uri ON record(uri);
     CREATE INDEX IF NOT EXISTS record_digest ON record(digest);
@@ -43,10 +43,15 @@ INSERT_LOCATION = """
 """
 INSERT_METADATA = """
     INSERT INTO metadata(
-        directory,
-        filename,
-        size
+        compression_type,
+        total_size,
+        file_count
     ) VALUES(?, ?, ?)
+"""
+SELECT_METADATA = """
+    SELECT total_size, file_count
+    FROM metadata
+    WHERE compression_type = ?
 """
 FIND_PREVIOUS_RESPONSES = """
     SELECT record_id
