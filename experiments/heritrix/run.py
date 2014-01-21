@@ -29,7 +29,7 @@ import meta
 import duplicates
 import structure
 
-MAX_TIME = 4*60*60
+MAX_TIME = 11*60*60
 #HERITRIX_JOBS_DIR = '/cs/research/fmedia/data5/wmayor/github/heritrix-3.1.1/jobs'  # NOQA
 #DONE_PATH = '/home/wmayor/done.txt'
 #DATA_DIR = '/scratch0/wmayor'

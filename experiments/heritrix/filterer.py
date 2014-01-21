@@ -1,3 +1,4 @@
+import sys
 import os
 
 from WARC import WARC
