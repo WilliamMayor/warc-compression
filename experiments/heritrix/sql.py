@@ -74,3 +74,9 @@ FIND_IDENTICAL = """
     ORDER BY date ASC
     LIMIT 1
 """
+TOTAL_SIZE = """
+    SELECT SUM(size)
+    FROM metadata
+    WHERE filename = ?
+"""
+
