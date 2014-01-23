@@ -47,6 +47,7 @@ def load_done(path):
 def save_done(path, done):
     with open(path, 'w') as fd:
         fd.write('\n'.join(done))
+        fd.flush()
 
 
 def rate_limit(response):
