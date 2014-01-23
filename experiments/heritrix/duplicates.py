@@ -2,16 +2,17 @@ import sqlite3
 import os
 
 import sql
+import utilities
 from WARC import WARC
 
 
 def remove(from_dir, to_dir, index_path):
     conn = sqlite3.connect(index_path)
     cursor = conn.cursor()
-    print('Removing duplicate records')
+    utilities.progress('Removing duplicate records', end=True)
+
     for root, dirs, files in os.walk(from_dir):
         for f in [f for f in files if f.endswith('.warc')]:
-            print('  Considering ' + f)
             abs_path = os.path.join(root, f)
             rel_path = abs_path.replace(from_dir, '').lstrip('/')
             new_path = os.path.join(to_dir, rel_path)
@@ -39,3 +40,4 @@ def remove(from_dir, to_dir, index_path):
                                              'revisit/identical-payload-digest')}  # NOQA
                         content = ''
                 w.add_record(headers, content)
+    conn.close()

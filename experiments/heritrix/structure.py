@@ -1,5 +1,6 @@
 import os
 
+import utilities
 from WARC import WARC
 
 LETTER_REPLACEMENTS = {
@@ -30,10 +31,9 @@ def _make_path(uri):
 
 
 def by_uri(from_dir, to_dir):
-    print('Restructuring files')
+    utilities.progress('Restructuring files', end=True)
     for root, dirs, files in os.walk(from_dir):
         for f in [f for f in files if f.endswith('.warc')]:
-            print('  Considering ' + f)
             info_headers, info_content = None, None
             abs_path = os.path.join(root, f)
             for headers, content, offset in WARC(abs_path).records():

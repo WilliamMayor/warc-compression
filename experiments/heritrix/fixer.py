@@ -35,7 +35,7 @@ def fix(job_dir):
         for root, dirs, files in os.walk(os.path.join(job_dir, b[0])):
             for f in files:
                 if f.endswith('.warc.gz'):
-                    print f
+                    print(f)
                     gz = gzip.open(os.path.join(root, f), 'rb')
                     content = gz.read()
                     gz.close()

@@ -2,7 +2,7 @@ import sys
 import os
 
 from WARC import WARC
-from utilities import ensure_dirs
+from utilities import ensure_dirs, progress
 
 
 def _record_in_local_domain(headers):
@@ -22,29 +22,22 @@ def _record_is_related(headers, allowed):
 
 
 def localhost(from_dir, to_dir):
-    print('Filtering records in ' + from_dir)
-    total = 0
-    kept = 0
+    progress('Filtering records', end=True)
     for root, dirs, files in os.walk(from_dir):
-        for f in filter(lambda n: n.endswith('.warc.gz'), files):
+        if 'latest' in root:
+            continue
+        for f in filter(lambda n: n.endswith('.warc.gz') or n.endswith('.warc'), files):
             keep_these = []
             wpath = os.path.join(root, f)
-            sys.stdout.write('.')
-            sys.stdout.flush()
             for headers, content, _ in WARC(wpath).records():
-                total += 1
                 if _record_in_local_domain(headers):
                     keep_these.append(headers['WARC-Record-ID'])
-            new_path = os.path.join(to_dir, f[:-3])
+            new_path = os.path.join(to_dir, f.replace('.gz', ''))
             ensure_dirs(new_path)
             w = WARC(new_path)
             for headers, content, _ in WARC(wpath).records():
                 if _record_is_related(headers, keep_these):
-                    kept += 1
                     w.add_record(headers, content)
-    print('\n    Found %d records' % total)
-    print('    Kept %d' % kept)
 
 if __name__ == '__main__':
-    import sys
     localhost(sys.argv[1], sys.argv[2])

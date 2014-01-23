@@ -1,3 +1,4 @@
+import shutil
 import sys
 import os
 import sqlite3
@@ -8,6 +9,10 @@ import tempfile
 from itertools import izip
 
 import sql
+import indexer
+import meta
+import compress
+import utilities
 from WARC import WARC
 
 
@@ -224,28 +229,33 @@ PATCHERS = {
 NAMES = ['%s@%s' % (x, y) for x in PATCHERS.keys() for y in STRATEGIES.keys()]
 
 
-def all_the_things(from_dir, to_dir, index):
-    print('Delta compressing records')
-    cursor = sqlite3.connect(index).cursor()
-    for root, dirs, files in os.walk(from_dir):
-        for f in [f for f in files if f.endswith('.warc')]:
-            sys.stdout.write('.')
-            sys.stdout.flush()
-            abs_path = os.path.join(root, f)
-            rel_path = abs_path.replace(from_dir, '', 1).lstrip('/')
-            for headers, content, _ in WARC(abs_path).records():
-                older = _find_older(headers, cursor)
-                for pname, patcher in PATCHERS.iteritems():
-                    for sname, strategy in STRATEGIES.iteritems():
-                        n = '%s@%s' % (pname, sname)
-                        p = os.path.join(to_dir, n, 'no_compression', rel_path)
-                        w = WARC(p)
+def all_the_things(from_dir, to_dir, store_dir, index):
+    conn = sqlite3.connect(index)
+    cursor = conn.cursor()
+    for pname, patcher in PATCHERS.iteritems():
+        for sname, strategy in STRATEGIES.iteritems():
+            n = '%s@%s' % (pname, sname)
+            utilities.progress(n)
+            nc = os.path.join(to_dir, n, 'no_compression')
+            for root, dirs, files in os.walk(from_dir):
+                for f in [f for f in files if f.endswith('.warc')]:
+                    abs_path = os.path.join(root, f)
+                    rel_path = abs_path.replace(from_dir, '', 1).lstrip('/')
+                    p = os.path.join(nc, rel_path)
+                    w = WARC(p)
+                    for headers, content, _ in WARC(abs_path).records():
+                        older = _find_older(headers, cursor)
                         if len(older) > 0:
                             d_headers, d_content = strategy(cursor, headers, content, older, pname, patcher)  # NOQA
                             w.add_record(d_headers, d_content)
                         else:
                             w.add_record(headers, content)
-    sys.stdout.write('\n')
+            mip = os.path.join(store_dir, n, 'index.db')
+            indexer.index(nc, mip)
+            meta.record_sizes(nc, mip)
+            compress.all_the_things(nc, to_dir, mip)
+            shutil.rmtree(os.path.join(to_dir, n))
+    conn.close()
     return NAMES
 
 
