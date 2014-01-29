@@ -26,7 +26,7 @@ def _bsdiff_diff(a, b):
     patch = tempfile.NamedTemporaryFile()
     with open(os.devnull, 'wb') as devnull:
         subprocess.call(
-            ['bsdiff', source.name, target.name, patch.name],
+            ['/home/wmayor/wc/bsdiff-4.3/bsdiff', source.name, target.name, patch.name],
             stdout=devnull,
             stderr=devnull
         )
@@ -47,7 +47,7 @@ def _bsdiff_patch(a, b):
     target = tempfile.NamedTemporaryFile()
     with open(os.devnull, 'wb') as devnull:
         subprocess.call(
-            ['bspatch', source.name, target.name, patch.name],
+            ['/home/wmayor/wc/bsdiff-4.3/bspatch', source.name, target.name, patch.name],
             stdout=devnull,
             stderr=devnull
         )
@@ -102,7 +102,7 @@ def _vcdiff_diff(a, b):
     target.flush()
     with open(os.devnull, 'wb') as devnull:
         content = subprocess.Popen(
-            ['vcdiff', 'delta',
+            ['/home/wmayor/wc/open-vcdiff-0.8.3/vcdiff', 'delta',
              '-dictionary', source.name,
              '-target', target.name],
             stdout=subprocess.PIPE,
@@ -122,7 +122,7 @@ def _vcdiff_patch(a, b):
     target.flush()
     with open(os.devnull, 'wb') as devnull:
         content = subprocess.Popen(
-            ['vcdiff', 'patch',
+            ['/home/wmayor/wc/open-vcdiff-0.8.3/vcdiff', 'patch',
              '-dictionary', source.name,
              '-delta', target.name],
             stdout=subprocess.PIPE,

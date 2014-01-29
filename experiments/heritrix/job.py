@@ -20,6 +20,7 @@ Processing involves:
 import os
 import shutil
 import sys
+import time
 
 import compress
 import filterer
@@ -32,6 +33,7 @@ import structure
 
 def run(job_dir, working_dir, store_dir):
     print('Running job ' + job_dir)
+    tick = time.time()
     filtered_dir = os.path.join(working_dir, 'original',
                                 'no_delta', 'no_compression')
     filterer.localhost(job_dir, filtered_dir)
@@ -74,6 +76,10 @@ def run(job_dir, working_dir, store_dir):
         rsip)
 
     shutil.rmtree(working_dir)
+    tock = time.time()
+    with open(os.path.join(store_dir, 'time_taken.txt'), 'w') as fd:
+        fd.write(str(int(tock - tick)))
+    print('Done')
 
 
 if __name__ == '__main__':
