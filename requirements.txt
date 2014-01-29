@@ -1,8 +1,8 @@
 Wand==0.3.5
 coverage==3.7
 cssutils==0.9.10
-hapy-heritrix==0.1
+hapy-heritrix==0.1.1
 nose==1.3.0
-requests==2.0.0
+requests==2.2.1
 tabulate==0.6
 wsgiref==0.1.2
