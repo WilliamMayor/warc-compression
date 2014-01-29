@@ -79,3 +79,20 @@ TOTAL_SIZE = """
     FROM metadata
     WHERE filename = ?
 """
+CLEAN_METADATA = """
+    DELETE
+    FROM metadata
+    WHERE path LIKE '%' || ? || '%'
+"""
+CLEAN_RECORD = """
+    DELETE
+    FROM record
+    WHERE record_id IN
+        (SELECT record_id
+         FROM location WHERE path LIKE '%' || ? || '%')
+"""
+CLEAN_LOCATION = """
+    DELETE
+    FROM location
+    WHERE path LIKE '%' || ? || '%'
+"""
