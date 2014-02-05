@@ -1,8 +1,4 @@
-import sys
-import os
-
 from WARC import WARC
-from utilities import ensure_dirs, progress
 
 
 def _record_in_local_domain(headers):
@@ -21,23 +17,40 @@ def _record_is_related(headers, allowed):
     ])
 
 
-def localhost(from_dir, to_dir):
-    progress('Filtering records', end=True)
-    for root, dirs, files in os.walk(from_dir):
-        if 'latest' in root:
-            continue
-        for f in filter(lambda n: n.endswith('.warc.gz') or n.endswith('.warc'), files):
-            keep_these = []
-            wpath = os.path.join(root, f)
-            for headers, content, _ in WARC(wpath).records():
-                if _record_in_local_domain(headers):
-                    keep_these.append(headers['WARC-Record-ID'])
-            new_path = os.path.join(to_dir, f.replace('.gz', ''))
-            ensure_dirs(new_path)
-            w = WARC(new_path)
-            for headers, content, _ in WARC(wpath).records():
-                if _record_is_related(headers, keep_these):
-                    w.add_record(headers, content)
+def duplicates(i):
+    uris = {}
+    for headers, content in i:
+        if 'WARC-Payload-Digest' in headers:
+            u = headers['WARC-Target-URI']
+            d = headers['WARC-Payload-Digest']
+            r = headers['WARC-Record-ID']
+            if u in uris:
+                if d in uris[u]:
+                    headers = {
+                        'WARC-Record-ID': r,
+                        'Content-Length': '0',
+                        'WARC-Date': headers['WARC-Date'],
+                        'WARC-Type': 'revisit',
+                        'WARC-Payload-Digest': d,
+                        'WARC-Refers-To': uris[u][d],
+                        'WARC-Target-URI': u,
+                        'WARC-Profile': ('http://netpreserve.org/'
+                                         'warc/1.0/revisit/'
+                                         'identical-payload-digest')}
+                    content = ''
+                else:
+                    uris[u][d] = r
+            else:
+                uris[u] = {d: r}
+        yield headers, content
 
-if __name__ == '__main__':
-    localhost(sys.argv[1], sys.argv[2])
+
+def localhost(warc_paths):
+    keep_these = []
+    for warc_path in warc_paths:
+        for headers, content, _ in WARC(warc_path):
+            if _record_in_local_domain(headers):
+                keep_these.append(headers['WARC-Record-ID'])
+        for headers, content, _ in WARC(warc_path):
+            if _record_is_related(headers, keep_these):
+                yield headers, content

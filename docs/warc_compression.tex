@@ -1,0 +1,80 @@
+\documentclass[11pt]{article}
+
+\usepackage{url}
+
+\begin{document}
+
+\section{Introduction}
+
+Web archiving initiatives generate vast amounts of data. The Internet Archive advertise their collection to be almost 2 petabytes, growing at a rate of 20 terabytes per month\footnotemark. As of October 2013 the British Library's archive of the UK web totalled 21 terabytes, growing by 4.5 terabytes over a one month period\footnotemark. The cost of providing storage for large collections can be high. For instance Amazon's Glacier service, an ``extremely low-cost storage service'', would charge The Internet Archive \$24,983 per month\footnotemark to store their collection. Requests to browse the archive would incur additional costs. This situation motivates us to ask how web archive data can be compressed in order to optimally reduce storage space.
+
+The Web ARChive (WARC) file format is the ISO standard\footnotemark commonly used to store web archive data. It is a plain text format that contains records of requests and responses of URLs, along with associated metadata, such as a list of links contained within the response data. The recommendation in the WARC standard is to append records to WARC files until they reach a size limit, at which point they should be gzipped and stored. The recommendation is that uncompressed WARC files should be no larger than one gigabyte. Using this recommendation our data set from Section~\ref{section:exp:github} compresses down to 28.49972\% of its original size. The WARC file format is extensible and the standard lists possible compression extensions. To our knowledge no such extension has been made publicly available and none are widely used. In this paper we explore possible extensions to the WARC format that would allow delta compression of consecutive records as well as different compression algorithms. We aim to: (i) reduce the total archive size and, (ii) allow easy partitioning of the database. The strategy that leads to the smallest total archive size compresses down to 19.28690\% of the original.
+
+\footnotetext{\url{https://archive.org/about/faqs.php#9}}
+\footnotetext{\url{https://web.archive.org/web/20131017144821/http://www.webarchive.org.uk/ukwa/statistics}}
+\footnotetext{\url{http://calculator.s3.amazonaws.com/calc5.html#r=DUB&s=GLACIER&key=calc-8B239980-5FC4-4CFF-B8B0-21CA0A49AEE3}}
+\footnotetext{\url{http://www.iso.org/iso/catalogue_detail.htm?csnumber=44717}}
+
+\section{Background}
+
+\begin{enumerate}
+\item WARC spec
+\item gzip, bzip2, zip, tar. What they do, why these ones?
+\item vcdiff, bsdiff, diffe. What they do, why these ones?
+\item internet archive, IIPC, BL. Collections, experience
+\item Heritrix
+\end{enumerate}
+
+\section{Experiment: Generated Data}
+
+\begin{enumerate}
+\item generate 1MB text data
+\item apply change repeatedly
+\item compression strategy
+\item compare
+\item very many changes, over time. What wins
+\item More than just text data? What kinds of changes?
+\end{enumerate}
+
+\section{Experiment: GitHub Pages}\label{section:exp:github}
+
+The code hosting service GitHub\footnotemark offers a free service called GitHub Pages\footnotemark that allows users to host static web content for free. In order to evaluate different compression strategies on realistic data we conducted a crawl that collected every GitHub repository with ``github.io'' in the project title. GitHub projects with this naming scheme are treated as GitHub Pages projects. Their contents are compiled by the static website generator software Jekyll\footnotemark and hosted. There were 27,507 suitable projects as of November 2013. Of these projects, X did not contain suitable web documents.
+
+Each suitable project was downloaded as a git repository. This enabled us to iterate through every change made to the website by considering each commit, one at a time. For each commit we ran a Heritrix crawl job over the available files.
+
+% TODO: How many projects do not contain web documents.
+%       We'll need to wait for Heritrix to process them
+%       and then count the empty Heritrix jobs.
+%       Currently 83 of 293 (28%)
+%       Should we expect 7792 projects in total to be dead?
+
+\footnotetext{\url{http://github.com/}}
+\footnotetext{\url{http://pages.github.com/}}
+\footnotetext{\url{http://jekyllrb.com/}}
+
+\begin{enumerate}
+\item duplicate detection requires the hash of all previous records
+\item what if you just diffed from a previous record. do you need more storage space?
+\item if not you can pass an archive job around by providing a single record to diff against
+\end{enumerate}
+
+
+\subsection{Content Analysis}
+
+Run analysis over the contents of the GitHub crawl.
+
+\section{Experiment: National Archive Collection}
+
+\begin{enumerate}
+\item Get data from major collection
+\item BL, archive.org, etc.
+\item Apply best strategy from previous section
+\item What real-world savings can we demonstrate?
+\end{enumerate}
+
+\section{Conclusion}
+
+The defaults in the WARC standard do not take advantage of the fact that many documents on the web will have many minor changes made to them over time. By using a delta algorithm as well as a compression algorithm we can reduce the total archive size by nearly half again.
+
+
+\end{document}

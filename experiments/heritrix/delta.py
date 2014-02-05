@@ -1,4 +1,3 @@
-import shutil
 import sys
 import os
 import sqlite3
@@ -7,13 +6,40 @@ import base64
 import subprocess
 import tempfile
 from itertools import izip
+from collections import defaultdict
 
-import sql
-import indexer
-import meta
-import compress
-import utilities
 from WARC import WARC
+
+BSDIFF_DIR = '/home/wmayor/wc/bsdiff-4.3/'
+VCDIFF_DIR = '/home/wmayor/wc/open-vcdiff-0.8.3/'
+BSDIFF_DIR = '/usr/local/bin/'
+VCDIFF_DIR = '/usr/local/bin/'
+
+
+SIZE_SCHEMA = """
+    CREATE TABLE IF NOT EXISTS recordsize(
+        record_id TEXT,
+        content_length INTEGER
+    );
+"""
+FIND_PREVIOUS_RESPONSES = """
+    SELECT record_id
+    FROM record
+    WHERE record_type = "response"
+        AND uri = ?
+        AND date < ?
+    ORDER BY date ASC
+"""
+INSERT_RECORD_SIZE = """
+    INSERT INTO
+    recordsize (record_id, content_length)
+    VALUES (?, ?)
+"""
+GET_LOCATION = """
+    SELECT path, offset
+    FROM record
+    WHERE record_id = ?
+"""
 
 
 def _bsdiff_diff(a, b):
@@ -26,7 +52,7 @@ def _bsdiff_diff(a, b):
     patch = tempfile.NamedTemporaryFile()
     with open(os.devnull, 'wb') as devnull:
         subprocess.call(
-            ['/home/wmayor/wc/bsdiff-4.3/bsdiff', source.name, target.name, patch.name],
+            ['%sbsdiff' % BSDIFF_DIR, source.name, target.name, patch.name],
             stdout=devnull,
             stderr=devnull
         )
@@ -47,7 +73,7 @@ def _bsdiff_patch(a, b):
     target = tempfile.NamedTemporaryFile()
     with open(os.devnull, 'wb') as devnull:
         subprocess.call(
-            ['/home/wmayor/wc/bsdiff-4.3/bspatch', source.name, target.name, patch.name],
+            ['%sbspatch' % BSDIFF_DIR, source.name, target.name, patch.name],
             stdout=devnull,
             stderr=devnull
         )
@@ -102,7 +128,7 @@ def _vcdiff_diff(a, b):
     target.flush()
     with open(os.devnull, 'wb') as devnull:
         content = subprocess.Popen(
-            ['/home/wmayor/wc/open-vcdiff-0.8.3/vcdiff', 'delta',
+            ['%svcdiff' % VCDIFF_DIR, 'delta',
              '-dictionary', source.name,
              '-target', target.name],
             stdout=subprocess.PIPE,
@@ -122,7 +148,7 @@ def _vcdiff_patch(a, b):
     target.flush()
     with open(os.devnull, 'wb') as devnull:
         content = subprocess.Popen(
-            ['/home/wmayor/wc/open-vcdiff-0.8.3/vcdiff', 'patch',
+            ['%svcdiff' % VCDIFF_DIR, 'patch',
              '-dictionary', source.name,
              '-delta', target.name],
             stdout=subprocess.PIPE,
@@ -135,7 +161,7 @@ def _vcdiff_patch(a, b):
 
 def _get_record(cursor, _id):
     location = cursor.execute(
-        sql.GET_LOCATION, (
+        GET_LOCATION, (
             _id,
         )
     ).fetchone()
@@ -146,7 +172,7 @@ def _find_older(headers, cursor):
     if headers['WARC-Type'] != 'response':
         return []
     return cursor.execute(
-        sql.FIND_PREVIOUS_RESPONSES, (
+        FIND_PREVIOUS_RESPONSES, (
             headers['WARC-Target-URI'],
             headers['WARC-Date']
         )).fetchall()
@@ -217,8 +243,6 @@ def _iframe(every):
 STRATEGIES = {
     'first': _first,
     'previous': _previous,
-    '2': _iframe(2),
-    '5': _iframe(5),
     '10': _iframe(10)
 }
 PATCHERS = {
@@ -229,33 +253,40 @@ PATCHERS = {
 NAMES = ['%s@%s' % (x, y) for x in PATCHERS.keys() for y in STRATEGIES.keys()]
 
 
-def all_the_things(from_dir, to_dir, store_dir, index):
-    conn = sqlite3.connect(index)
+def run(warcs_dir, scratch_dir, db_dir):
+    conn = sqlite3.connect(os.path.join(db_dir, 'index.db'))
     cursor = conn.cursor()
-    for pname, patcher in PATCHERS.iteritems():
-        for sname, strategy in STRATEGIES.iteritems():
-            n = '%s@%s' % (pname, sname)
-            utilities.progress(n)
-            nc = os.path.join(to_dir, n, 'no_compression')
-            for root, dirs, files in os.walk(from_dir):
-                for f in [f for f in files if f.endswith('.warc')]:
-                    abs_path = os.path.join(root, f)
-                    rel_path = abs_path.replace(from_dir, '', 1).lstrip('/')
-                    p = os.path.join(nc, rel_path)
-                    w = WARC(p)
-                    for headers, content, _ in WARC(abs_path).records():
-                        older = _find_older(headers, cursor)
+    inserts = defaultdict(list)
+    for root, dirs, files in os.walk(warcs_dir):
+        for f in [f for f in files if f.endswith('.warc')]:
+            abs_path = os.path.join(root, f)
+            for headers, content, _ in WARC(abs_path):
+                older = _find_older(headers, cursor)
+                for pname, patcher in PATCHERS.iteritems():
+                    for sname, strategy in STRATEGIES.iteritems():
+                        n = '%s@%s' % (pname, sname)
+                        nc = os.path.join(scratch_dir, n, 'no_compression')
+                        rel_path = abs_path.replace(warcs_dir, '', 1)
+                        rel_path = rel_path.lstrip('/')
+                        p = os.path.join(nc, rel_path)
+                        w = WARC(p)
                         if len(older) > 0:
-                            d_headers, d_content = strategy(cursor, headers, content, older, pname, patcher)  # NOQA
+                            d_headers, d_content = strategy(
+                                cursor, headers, content,
+                                older, pname, patcher)
                             w.add_record(d_headers, d_content)
+                            inserts[n].append((
+                                d_headers['WARC-Record-ID'], len(d_content)))
                         else:
                             w.add_record(headers, content)
-            mip = os.path.join(store_dir, n, 'index.db')
-            indexer.index(nc, mip)
-            meta.record_sizes(nc, mip)
-            compress.all_the_things(nc, to_dir, mip)
-            shutil.rmtree(os.path.join(to_dir, n))
     conn.close()
+    for n, i in inserts.iteritems():
+        conn = sqlite3.connect(os.path.join(db_dir, '%s.db' % n))
+        cursor = conn.cursor()
+        cursor.executescript(SIZE_SCHEMA)
+        cursor.executemany(INSERT_RECORD_SIZE, i)
+        conn.commit()
+        conn.close()
     return NAMES
 
 

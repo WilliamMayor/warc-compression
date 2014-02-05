@@ -1,86 +1,69 @@
-"""
-python main.py
-
-Reads through the list of available Heritrix jobs, finds one that has not been
-processed and processes it.
-
-Processing involves:
-    1) Collecting the .warc files
-    2) Filtering any WARC records that point outside of localhost
-    3) Index the .warcs
-    4) Delta and compress the .warcs
-    5) Index the delta-ed .warcs
-    6) Remove duplicate WARC records
-    7) Do steps 3-5 on the new .warcs
-    8) Reorganise the .warcs into one file per URL
-    9) Do steps 3-5 on the new .warcs
-
-
-"""
+import time
 import os
 import shutil
 import sys
-import time
 
-import compress
 import filterer
 import indexer
 import delta
-import meta
-import duplicates
-import structure
+import compress
+from WARC import WARC
 
 
-def run(job_dir, working_dir, store_dir):
-    print('Running job ' + job_dir)
+def copy_results(from_dir, to_dir):
+    db_dir = os.path.join(to_dir, 'databases')
+    shutil.copytree(from_dir, db_dir)
+    return db_dir
+
+
+def save_results(from_dir, to_dir):
+    shutil.rmtree(to_dir)
+    shutil.move(from_dir, to_dir)
+
+
+def copy_data(from_dir, to_dir):
+    warcs_dir = os.path.join(to_dir, 'warcs', 'no_delta', 'no_compression')
+    count = 0
+    p = os.path.join(warcs_dir, '%d.warc' % count)
+    w = WARC(p)
+    s = 0
+    for root, _, files in os.walk(from_dir):
+        filtered = filterer.duplicates(
+            filterer.localhost(
+                map(
+                    lambda f: os.path.join(root, f),
+                    filter(lambda f: f.endswith('.warc'), files))))
+        for headers, content in filtered:
+            s += w.add_record(headers, content)
+            if s > 1024 * 1024 * 1024:
+                count += 1
+                p = os.path.join(warcs_dir, '%d.warc' % count)
+                w = WARC(p)
+    return warcs_dir
+
+
+def run(data_dir, scratch_dir, results_dir):
     tick = time.time()
-    filtered_dir = os.path.join(working_dir, 'original',
-                                'no_delta', 'no_compression')
-    filterer.localhost(job_dir, filtered_dir)
-    mip = os.path.join(store_dir, 'original', 'no_delta', 'index.db')
-    indexer.index(filtered_dir, mip)
-    meta.record_sizes(filtered_dir, mip)
-    compress.all_the_things(filtered_dir, working_dir, mip)
-    delta.all_the_things(
-        filtered_dir,
-        working_dir,
-        os.path.join(store_dir, 'original'),
-        mip)
-
-    no_dup_dir = os.path.join(working_dir, 'no_duplicates',
-                              'no_delta', 'no_compression')
-    duplicates.remove(filtered_dir, no_dup_dir, mip)
-    shutil.rmtree(filtered_dir)
-    ndip = os.path.join(store_dir, 'no_duplicates', 'no_delta', 'index.db')
-    indexer.index(no_dup_dir, ndip)
-    meta.record_sizes(no_dup_dir, ndip)
-    compress.all_the_things(no_dup_dir, working_dir, ndip)
-    delta.all_the_things(
-        no_dup_dir,
-        working_dir,
-        os.path.join(store_dir, 'no_duplicates'),
-        ndip)
-
-    restruct_dir = os.path.join(working_dir, 'restructured',
-                                'no_delta', 'no_compression')
-    structure.by_uri(no_dup_dir, restruct_dir)
-    shutil.rmtree(no_dup_dir)
-    rsip = os.path.join(store_dir, 'restructured', 'no_delta', 'index.db')
-    indexer.index(restruct_dir, rsip)
-    meta.record_sizes(restruct_dir, rsip)
-    compress.all_the_things(restruct_dir, working_dir, rsip)
-    delta.all_the_things(
-        restruct_dir,
-        working_dir,
-        os.path.join(store_dir, 'restructured'),
-        rsip)
-
-    shutil.rmtree(working_dir)
-    tock = time.time()
-    with open(os.path.join(store_dir, 'time_taken.txt'), 'w') as fd:
-        fd.write(str(int(tock - tick)))
-    print('Done')
-
+    print('Copying to scratch')
+    db_dir = copy_results(results_dir, scratch_dir)
+    warcs_dir = copy_data(data_dir, scratch_dir)
+    index_path = os.path.join(db_dir, 'index.db')
+    size_path = os.path.join(db_dir, 'no_delta.db')
+    print('Indexing')
+    indexer.index(warcs_dir, index_path, size_path)
+    delta_dir = os.path.join(scratch_dir, 'warcs')
+    print('Creating delta versions')
+    deltas = delta.run(warcs_dir, delta_dir, db_dir)
+    deltas.append('no_delta')
+    print('Compressing')
+    compress.run(deltas, delta_dir, db_dir)
+    print('Copying results back to home')
+    save_results(db_dir, results_dir)
+    shutil.rmtree(scratch_dir)
+    with open(os.path.join(results_dir, 'time_taken.txt'), 'w') as fd:
+        fd.write('%d' % int(time.time() - tick))
+    with open(os.path.join(results_dir, 'DONE'), 'w') as fd:
+        fd.write('done\n')
 
 if __name__ == '__main__':
     run(sys.argv[1], sys.argv[2], sys.argv[3])

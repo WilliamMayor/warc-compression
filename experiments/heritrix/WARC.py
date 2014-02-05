@@ -1,8 +1,6 @@
+import os
 import bz2
-import zipfile
 import gzip
-
-import utilities
 
 
 class WARC:
@@ -16,22 +14,23 @@ class WARC:
     def __init__(self, path):
         self.path = path
         self.gzipped = path.endswith('.gz')
-        self.zipped = path.endswith('.zip')
         self.bzipped = path.endswith('.bz2')
 
     def _open(self, mode):
         if self.gzipped:
             return gzip.open(self.path, mode)
-        elif self.zipped:
-            return zipfile.ZipFile(self.path, mode, zipfile.ZIP_DEFLATED)
         elif self.bzipped:
             return bz2.BZ2File(self.path, mode)
         else:
             return open(self.path, mode)
 
     def add_record(self, headers, content):
-        utilities.ensure_dirs(self.path)
+        try:
+            os.makedirs(os.path.dirname(self.path))
+        except:
+            pass
         fd = self._open('ab')
+        start = fd.tell()
         fd.write(WARC.OPENER)
         for f, v in headers.iteritems():
             fd.write(f)
@@ -41,7 +40,9 @@ class WARC:
         fd.write(WARC.CRLF)
         fd.write(content)
         fd.write(WARC.FINISHER)
+        size = fd.tell() - start
         fd.close()
+        return size
 
     def get_record(self, seek):
         fd = self._open('rb')
@@ -50,7 +51,7 @@ class WARC:
         fd.close()
         return headers, content
 
-    def records(self):
+    def __iter__(self):
         fd = self._open('rb')
         offset = 0
         headers, content = self._next_record(fd)

@@ -1,12 +1,29 @@
+import sqlite3
 import os
 import tarfile
 import gzip
-import zipfile
 import shutil
 from bz2 import BZ2File
 
-import meta
-from utilities import ensure_dirs, progress
+SIZE_SCHEMA = """
+    CREATE TABLE IF NOT EXISTS archivesize(
+        compression_type TEXT,
+        path TEXT,
+        size INTEGER
+    );
+"""
+INSERT_ARCHIVE_SIZE = """
+    INSERT INTO
+    archivesize (compression_type, path, size)
+    VALUES (?, ?, ?)
+"""
+
+
+def ensure_dirs(path):
+    try:
+        os.makedirs(os.path.dirname(path))
+    except:
+        pass
 
 
 def _relative_paths(from_dir):
@@ -26,17 +43,6 @@ def gzip_(from_dir, to_dir):
         with open(old_path, 'rb') as fd:
             gzw.write(fd.read())
         gzw.close()
-    return to
-
-
-def zip_(from_dir, to_dir):
-    to = os.path.join(to_dir, 'zip')
-    for rel_path in _relative_paths(from_dir):
-        old_path = os.path.join(from_dir, rel_path)
-        new_path = os.path.join(to, rel_path) + '.zip'
-        ensure_dirs(new_path)
-        with zipfile.ZipFile(new_path, 'w', zipfile.ZIP_DEFLATED) as archive:
-            archive.write(old_path)
     return to
 
 
@@ -76,16 +82,37 @@ def tarbzip2(from_dir, to_dir):
     return to
 
 
-def all_the_things(from_dir, to_dir, index_path):
-    progress('compressing', end=True)
-    for f in [gzip_, zip_, bzip2, targz, tarbzip2]:
-        compressed = f(from_dir, to_dir)
-        meta.record_sizes(compressed, index_path)
-        try:
-            os.remove(compressed)
-        except OSError:
-            shutil.rmtree(compressed)
-
-if __name__ == '__main__':
-    import sys
-    all_the_things(sys.argv[1], sys.argv[2])
+def run(names, data_dir, db_dir):
+    strats = {
+        'gzip': gzip_, 'bz2': bzip2,
+        'tar.gz': targz, 'tar.bz2': tarbzip2}
+    for dn in names:
+        original_path = os.path.join(data_dir, dn, 'no_compression')
+        inserts = []
+        for r, _, files in os.walk(original_path):
+            for f in files:
+                path = os.path.join(r, f)
+                size = os.path.getsize(path)
+                inserts.append(('no_compression', path, size))
+        for cn, func in strats.iteritems():
+            compressed = func(
+                original_path,
+                os.path.join(data_dir, dn))
+            if os.path.isdir(compressed):
+                for r, _, files in os.walk(compressed):
+                    for f in files:
+                        path = os.path.join(r, f)
+                        size = os.path.getsize(path)
+                        inserts.append((cn, path, size))
+                shutil.rmtree(compressed)
+            else:
+                size = os.path.getsize(compressed)
+                inserts.append((cn, compressed, size))
+                os.remove(compressed)
+        db_path = os.path.join(db_dir, '%s.db' % dn)
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.executescript(SIZE_SCHEMA)
+        cursor.executemany(INSERT_ARCHIVE_SIZE, inserts)
+        conn.commit()
+        conn.close()
