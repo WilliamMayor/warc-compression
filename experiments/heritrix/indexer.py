@@ -35,6 +35,14 @@ CT_REGEXP = re.compile(
 )
 
 
+def job_name(path):
+    up = os.path.dirname(
+        os.path.dirname(
+            os.path.dirname(
+                os.path.dirname(path))))
+    return os.path.basename(up)
+
+
 def index(warc_dir, index_path, size_path):
     iconn = sqlite3.connect(index_path)
     icursor = iconn.cursor()
@@ -51,7 +59,7 @@ def index(warc_dir, index_path, size_path):
                 m = CT_REGEXP.search(content)
                 content_type = m.group(1) if m is not None else None
                 iinserts.append((
-                    os.path.basename(os.path.dirname(path)),
+                    job_name(path),
                     path,
                     offset,
                     headers['WARC-Record-ID'],
