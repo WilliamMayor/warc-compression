@@ -3,7 +3,6 @@ import os
 import sqlite3
 import sys
 
-import delta
 from WARC import WARC
 
 INDEX_SCHEMA = """
@@ -16,7 +15,8 @@ INDEX_SCHEMA = """
         uri TEXT,
         date TEXT,
         digest TEXT,
-        content_type TEXT
+        content_type TEXT,
+        content_length INTEGER
     );
     CREATE INDEX IF NOT EXISTS record_uri ON record(uri);
 """
@@ -24,8 +24,9 @@ INSERT_RECORD = """
     INSERT INTO
     record (job, path, offset,
             record_id, record_type, uri,
-            date, digest, content_type)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            date, digest, content_type,
+            content_length)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 """
 
 RID_EXISTS = 'SELECT * FROM record WHERE record_id = ?'
@@ -43,15 +44,11 @@ def job_name(path):
     return os.path.basename(up)
 
 
-def index(warc_dir, index_path, size_path):
+def index(warc_dir, index_path):
     iconn = sqlite3.connect(index_path)
     icursor = iconn.cursor()
     icursor.executescript(INDEX_SCHEMA)
     iinserts = []
-    sconn = sqlite3.connect(size_path)
-    scursor = sconn.cursor()
-    scursor.executescript(delta.SIZE_SCHEMA)
-    sinserts = []
     for root, _, files in os.walk(warc_dir):
         for f in [f for f in files if f.endswith('.warc')]:
             path = os.path.join(root, f)
@@ -67,15 +64,12 @@ def index(warc_dir, index_path, size_path):
                     headers.get('WARC-Target-URI', None),
                     headers['WARC-Date'],
                     headers.get('WARC-Payload-Digest', None),
-                    content_type
+                    content_type,
+                    len(content)
                 ))
-                sinserts.append((headers['WARC-Record-ID'], len(content)))
     icursor.executemany(INSERT_RECORD, iinserts)
     iconn.commit()
     iconn.close()
-    scursor.executemany(delta.INSERT_RECORD_SIZE, sinserts)
-    sconn.commit()
-    sconn.close()
 
 if __name__ == '__main__':
     index(sys.argv[1], sys.argv[2])
