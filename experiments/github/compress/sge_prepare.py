@@ -10,7 +10,7 @@ JOBS_DIR = '/Users/william/Desktop/test_data/heritrix/jobs'
 HOME_DIR = '/Users/william/Desktop/test_data/home'
 SCRATCH_DIR = '/Users/william/Desktop/test_data/scratch0'
 PYTHON_PATH = 'python'
-CODE_PATH = '/Users/william/Projects/warc-compression/experiments/heritrix'
+CODE_PATH = '/Users/william/Projects/warc-compression/experiments/github/compress'
 
 import math
 import shutil
@@ -161,7 +161,7 @@ def prepare():
             break
     else:
         print('All done')
-        return
+        return False
     gunzip()
 
     save_done(done, job)
@@ -190,6 +190,7 @@ def prepare():
             data=DATA_DIR,
             scratch=os.path.join(SCRATCH_DIR, job),
             results=os.path.join(HOME_DIR, 'results')))
+    return True
 
 if __name__ == '__main__':
     prepare()
