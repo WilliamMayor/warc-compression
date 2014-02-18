@@ -1,0 +1,5 @@
+hapy-heritrix==0.1.1
+nose==1.3.0
+requests==2.2.1
+sh==1.09
+wsgiref==0.1.2
