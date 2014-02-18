@@ -1,4 +1,9 @@
-CODE_DIR="/Users/william/Projects/warc-compression/experiments/"
+CODE_DIR="/cs/research/fmedia/data5/wmayor/github/code/"
+HERITRIX_DIR="/cs/research/fmedia/data5/wmayor/github/heritrix-3.1.1/"
+HERITRIX_PASSWORD="8700mm0n9wnxkjc1cvtbdhdqyxlji7z0"
+CRAWL_DIR="/cs/research/fmedia/data5/wmayor/github/crawl/"
+
+CODE_DIR="/Users/william/Projects/warc-compression/experiments/github/"
 HERITRIX_DIR="/usr/local/heritrix-3.1.1/"
 HERITRIX_PASSWORD="8700mm0n9wnxkjc1cvtbdhdqyxlji7z0"
 CRAWL_DIR="/Users/william/Desktop/test_data/crawl/"
@@ -22,5 +27,5 @@ do
         sleep 300
     done
     echo "Spawning new archiver"
-    python -u "${CODE_DIR}github/archive/archive.py" "${CRAWL_DIR}" "${HERITRIX_PASSWORD}" &
+    python -u "${CODE_DIR}archive/archive.py" "${CRAWL_DIR}" "${HERITRIX_PASSWORD}" &
 done
