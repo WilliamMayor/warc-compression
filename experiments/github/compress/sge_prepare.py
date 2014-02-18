@@ -4,7 +4,7 @@ JOBS_DIR = '/cs/research/fmedia/data5/wmayor/github/heritrix-3.1.1/jobs'
 HOME_DIR = '/home/wmayor/wc'
 SCRATCH_DIR = '/scratch0/wmayor'
 PYTHON_PATH = '/share/apps/python-2.7.1/bin/python'
-CODE_PATH = '/home/wmayor/wc/code'
+CODE_PATH = '/home/wmayor/wc/code/compress'
 
 JOBS_DIR = '/Users/william/Desktop/test_data/heritrix/jobs'
 HOME_DIR = '/Users/william/Desktop/test_data/home'

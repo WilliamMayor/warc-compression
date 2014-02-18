@@ -44,6 +44,7 @@ def copy_data(from_dir, to_dir):
 
 def run(data_dir, scratch_dir, results_dir):
     tick = time.time()
+    job = os.path.basename(scratch_dir)
     print('Copying to scratch')
     db_dir = copy_results(results_dir, scratch_dir)
     warcs_dir = copy_data(data_dir, scratch_dir)
@@ -52,7 +53,7 @@ def run(data_dir, scratch_dir, results_dir):
     indexer.index(warcs_dir, index_path)
     delta_dir = os.path.join(scratch_dir, 'warcs')
     print('Creating delta versions')
-    deltas = delta.run(warcs_dir, delta_dir, db_dir)
+    deltas = delta.run(warcs_dir, delta_dir, db_dir, job)
     deltas.append('no_delta')
     print('Compressing')
     compress.run(deltas, delta_dir, db_dir)

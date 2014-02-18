@@ -26,6 +26,7 @@ FIND_PREVIOUS_RESPONSES = """
     SELECT record_id
     FROM record
     WHERE record_type = "response"
+        AND job = ?
         AND uri = ?
         AND date < ?
     ORDER BY date ASC
@@ -168,11 +169,12 @@ def _get_record(cursor, _id):
     return WARC(location[0]).get_record(int(location[1]))
 
 
-def _find_older(headers, cursor):
+def _find_older(headers, cursor, job):
     if headers['WARC-Type'] != 'response':
         return []
     return cursor.execute(
         FIND_PREVIOUS_RESPONSES, (
+            job,
             headers['WARC-Target-URI'],
             headers['WARC-Date']
         )).fetchall()
@@ -253,7 +255,7 @@ PATCHERS = {
 NAMES = ['%s@%s' % (x, y) for x in PATCHERS.keys() for y in STRATEGIES.keys()]
 
 
-def run(warcs_dir, scratch_dir, db_dir):
+def run(warcs_dir, scratch_dir, db_dir, job):
     conn = sqlite3.connect(os.path.join(db_dir, 'index.db'))
     cursor = conn.cursor()
     inserts = defaultdict(list)
@@ -261,7 +263,7 @@ def run(warcs_dir, scratch_dir, db_dir):
         for f in [f for f in files if f.endswith('.warc')]:
             abs_path = os.path.join(root, f)
             for headers, content, _ in WARC(abs_path):
-                older = _find_older(headers, cursor)
+                older = _find_older(headers, cursor, job)
                 for pname, patcher in PATCHERS.iteritems():
                     for sname, strategy in STRATEGIES.iteritems():
                         n = '%s@%s' % (pname, sname)
