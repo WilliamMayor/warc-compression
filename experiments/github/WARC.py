@@ -66,7 +66,13 @@ class WARC:
         _records = self.records
         if self.order_by is not None:
             _records = sorted(_records, cmp=self._compare_factory(self.order_by))
+        info_written = False
         for r in _records:
+            if r.headers['WARC-Type'].lower() == 'warcinfo':
+                if not info_written:
+                    info_written = True
+                else:
+                    continue
             fd.write(WARC.OPENER)
             for f, v in r.headers.iteritems():
                 fd.write(f)

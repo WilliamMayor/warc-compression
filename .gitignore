@@ -47,3 +47,4 @@ data/lenna/
 data/lorem/
 .texpadtmp/
 docs/.ipynb_checkpoints/
+*.log
