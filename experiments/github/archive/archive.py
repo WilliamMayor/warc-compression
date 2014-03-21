@@ -12,6 +12,7 @@ import logging
 import hapy
 import sh
 
+from github.WARC import WARC, Record
 from template import t
 from filelock import FileLock
 
@@ -54,7 +55,7 @@ def git_rev_list(path):
 
 
 def git_checkout(path, commit):
-    sh.git.checkout(commit, _cwd=path)
+    sh.git.checkout('--force', commit, _cwd=path)
 
 
 def jekyll_serve(path, port):
@@ -159,7 +160,87 @@ def process_commit(repo_path, name, commit, port):
             pass
 
 
-def process_repo(repo_path, name):
+def _is_wanted_response(headers, content):
+    return all([
+        headers['WARC-Type'] == 'response',
+        'http://localhost:' in headers.get('WARC-Target-URI', ''),
+        'HTTP/1.1 404 Not Found' not in content
+    ])
+
+
+def _is_wanted_record(headers, allowed):
+    return any([
+        headers['WARC-Record-ID'] in allowed,
+        headers.get('WARC-Concurrent-To', None) in allowed,
+        headers.get('WARC-Refers-To', None) in allowed,
+        headers['WARC-Type'] == 'warcinfo'
+    ])
+
+
+def filter_records(path):
+    keep_these = []
+    uris = {}
+    for root, dirs, files in os.walk(path):
+        for f in [f for f in files if f.endswith('.warc.gz')]:
+            for record in WARC(os.path.join(root, f)):
+                headers = record.headers
+                content = record.content
+                if _is_wanted_response(headers, content):
+                    keep_these.append(headers['WARC-Record-ID'])
+                    uri = headers['WARC-Target-URI']
+                    digest = headers['WARC-Payload-Digest']
+                    date = headers['WARC-Date']
+                    id_ = headers['WARC-Record-ID']
+                    if uri in uris:
+                        if digest in uris[uri]:
+                            if uris[uri][digest][1] > date:
+                                uris[uri][digest] = (id_, date)
+                        else:
+                            uris[uri][digest] = (id_, date)
+                    else:
+                        uris[uri] = {digest: (id_, date)}
+    for root, dirs, files in os.walk(path):
+        for f in [f for f in files if f.endswith('.warc.gz')]:
+            for record in WARC(os.path.join(root, f)):
+                headers = record.headers
+                content = record.content
+                if _is_wanted_record(headers, keep_these):
+                    if headers['WARC-Type'] == 'response':
+                        uri = headers['WARC-Target-URI']
+                        digest = headers['WARC-Payload-Digest']
+                        id_ = headers['WARC-Record-ID']
+                        if id_ != uris[uri][digest][0]:
+                            headers = {
+                                'WARC-Record-ID': id_,
+                                'Content-Length': '0',
+                                'WARC-Date': headers['WARC-Date'],
+                                'WARC-Type': 'revisit',
+                                'WARC-Payload-Digest': digest,
+                                'WARC-Refers-To': uris[uri][digest][0],
+                                'WARC-Target-URI': uri,
+                                'WARC-Profile': ('http://netpreserve.org/'
+                                                 'warc/1.0/revisit/'
+                                                 'identical-payload-digest')}
+                            content = ''
+                    yield Record(headers, content)
+
+
+def process_warcs(name, to_dir):
+    logger = logging.getLogger('archive-%s' % name)
+    try:
+        logger.info('Processing WARCs into days')
+        from_dir = os.path.basename(HERITRIX.get_job_info(name)['job']['primaryConfig'])
+        for r in filter_records(from_dir):
+            date, time = r.headers['WARC-Date'].split('T', maxsplit=1)
+            w = WARC(os.path.join(to_dir, date + ".warc"), order_by='WARC-Date')
+            w.add(r)
+            w.save()
+    except KeyError:
+        logger.error('Couldn\'t find primaryConfig')
+        logger.error(str(HERITRIX.get_job_info(name)))
+
+
+def process_repo(repo_path, name, warcs_dir):
     logger = logging.getLogger('archive-%s' % name)
     rev_list = git_rev_list(repo_path)
     if len(rev_list) > 0:
@@ -175,10 +256,10 @@ def process_repo(repo_path, name):
         for commit in rev_list:
             process_commit(repo_path, name, commit, port)
         git_checkout(repo_path, 'master')
-        return True
+        process_warcs(name, warcs_dir)
+        #HERITRIX.delete_job(name)
     else:
         logger.info('No commits')
-        return False
 
 
 def find_job(data_dir, done, current):
@@ -193,14 +274,15 @@ def find_job(data_dir, done, current):
     return None, None
 
 
-def process(data_dir):
+def process(data_dir, warcs_dir):
     done_path = os.path.join(data_dir, 'archived.txt')
     done = load_list(done_path)
     current_path = os.path.join(data_dir, 'current.txt')
     with FileLock(current_path):
         current = load_list(current_path, need_lock=False)
         job, repo_path = find_job(data_dir, done, current)
-        current.add(job)
+        if job is not None:
+            current.add(job)
         save_list(current_path, current, need_lock=False)
     if None not in [job, repo_path]:
         logger = logging.getLogger('archive-%s' % job)
@@ -210,17 +292,19 @@ def process(data_dir):
         logger.addHandler(hdlr)
         logger.setLevel(logging.INFO)
         try:
-            process_repo(repo_path, job)
+            process_repo(repo_path, job, warcs_dir)
             done.add(job)
             save_list(done_path, done)
         except:
             logger.error('Error occurred')
             logger.error(traceback.format_exc())
+    o = sh.ps(o='ppid')
+    assert '\n%d\n' % os.getpid() not in o
 
 if __name__ == '__main__':
     HERITRIX = hapy.Hapy(
         HERITRIX_URL,
         username='admin',
-        password=sys.argv[2],
+        password=sys.argv[3],
         timeout=10.0)
-    process(sys.argv[1])
+    process(sys.argv[1], sys.argv[2])
