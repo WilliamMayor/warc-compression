@@ -1,14 +1,18 @@
-import pprint
-import sys
-
-import hapy
+import os
 
 import archive
 
-h = hapy.Hapy(
-        archive.HERITRIX_URL,
-        username='admin',
-        password=sys.argv[1],
-        timeout=10.0)
+jobs_dir = '/cs/research/fmedia/data5/wmayor/github/heritrix-3.1.1/jobs'
+warcs_dir = '/cs/research/fmedia/data5/wmayor/github/warcs'
 
-pprint.pprint(h.get_info())
+for e in os.listdir(jobs_dir):
+    p = os.path.join(jobs_dir, e)
+    if os.path.isdir(p):
+        print p
+        for r in filter_records(p):
+            date, time = r.headers['WARC-Date'].split('T', 1)
+            w = WARC(os.path.join(warcs_dir, date + ".warc"), order_by='WARC-Date')
+            w.add(r)
+            w.save()
+
+print 'Done!'
