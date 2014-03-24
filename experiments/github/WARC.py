@@ -9,6 +9,15 @@ class Record:
         self.headers = headers
         self.content = content
 
+    def __eq__(self, other):
+        try:
+            return self.headers['WARC-Record-ID'] == other.headers['WARC-Record-ID']
+        except:
+            return False
+
+    def __hash__(self):
+        return hash(self.headers['WARC-Record-ID'])
+
     def __repr__(self):
         return '<Record %s>' % self.headers['WARC-Record-ID']
 
@@ -24,7 +33,7 @@ class WARC:
     def __init__(self, path, order_by=None):
         self.path = path
         self.order_by = order_by
-        self.records = []
+        self.records = set()
         self._read = False
 
     def _open(self, mode):
@@ -137,5 +146,5 @@ class WARC:
         return Record(headers, content)
 
     def add(self, record):
-        self.records.append(record)
+        self.records.add(record)
 
