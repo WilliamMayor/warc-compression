@@ -20,9 +20,9 @@ __VCDIFF_PATH = '/usr/local/bin/'
 __ZPAQ_PATH = '/Users/william/bin/zpaq649/'
 os.environ['PATH'] = os.environ['PATH'] + ':%s:%s' % (__VCDIFF_PATH, __ZPAQ_PATH)
 
-__NUM_TRIALS = 1
-__NUM_STEPS = 2
-__DATA_SIZE = 4
+__NUM_TRIALS = 10
+__NUM_STEPS = 1024
+__DATA_SIZE = 1024
 
 sql_schema = """
     CREATE TABLE IF NOT EXISTS delta(
@@ -126,14 +126,6 @@ class Experiment(object):
         return do.__name__, delta, tick[1] - tick[0], tick[2] - tick[1]
 
     def mutate(self, current, count):
-        """
-        >>> 'a' not in mutate(['a', 'a'], 2)
-        True
-        >>> len([1 for c in mutate(['a', 'a'], 1) if c == 'a'])
-        1
-        >>> len([1 for c in mutate(['a', 'a'], 1) if c != 'a'])
-        1
-        """
         n = len(string.printable) - 1
         indicies = random.sample(xrange(len(current)), count)
         for j, k in enumerate(indicies):

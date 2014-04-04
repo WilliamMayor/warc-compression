@@ -48,3 +48,6 @@ data/lorem/
 .texpadtmp/
 docs/.ipynb_checkpoints/
 *.log
+
+.zedstate
+images/

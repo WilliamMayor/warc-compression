@@ -210,8 +210,15 @@ class TestRun:
         # If there isn't a new line at the end of the file diff complains
         # If there is a new line then it eats it when applying the patch
         # I don't think this will affect many files, those that it does will
-        # only be changes by a single byte.
+        # only be changed by a single byte.
         assert_equals('second', self.E.un_diff(fd1, self.E.diff(fd1, fd2)))
+
+    def test_diff_same_text(self):
+        fd1 = self.E.write('something')
+        fd2 = self.E.write('something')
+        patch = self.E.diff(fd1, fd2)
+        assert_equals(len(patch), 0)
+
 
     def test_vcdiff_leak(self):
         fd1 = self.E.write('first')
@@ -249,6 +256,15 @@ class TestRun:
         fd2.seek(0)
         assert_equals('first', fd1.read())
         assert_equals('second', fd2.read())
+        
+    def test_vcdiff_then_gzip(self):
+        fd1 = self.E.write('first')
+        fd2 = self.E.write('second')
+        patch = self.E.vcdiff(fd1, fd2)
+        compressed = self.E.gzip(patch)
+        uncompressed = self.E.un_gzip(compressed)
+        assert_equals(patch, uncompressed)
+        assert_equals('second', self.E.un_vcdiff(fd1, uncompressed))
 
     def test_run(self):
         _, db_path = tempfile.mkstemp()
